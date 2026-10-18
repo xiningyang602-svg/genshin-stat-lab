@@ -1,0 +1,180 @@
+{
+  "sourceCommit": "499e644efd36163525717a422386ae04328864ee",
+  "files": [
+    {
+      "path": "app.js",
+      "bytes": 115306,
+      "sha256": "cab51a5f0faf1cb013782bade0815f42f0266fa24d7eb2b054d774243311d6df"
+    },
+    {
+      "path": "artifacts.js",
+      "bytes": 9402,
+      "sha256": "21d9b99ff3088168089001537e5ac8517a61cf3af308da2efaaf10bea3af55a6"
+    },
+    {
+      "path": "characters.js",
+      "bytes": 32773,
+      "sha256": "ba767ad8079e31e52d9c93e1baf2f91046d7e3bbb0caab87e45691bef357f33d"
+    },
+    {
+      "path": "data.js",
+      "bytes": 1169401,
+      "sha256": "f3468b3c2b6a7b9a4df9cad44ab0ef86e519a2a859b3cf861976f7ae71e1f91a"
+    },
+    {
+      "path": "engine.js",
+      "bytes": 97950,
+      "sha256": "424e1364b04a6483e3ecb4affea22c713deb3f825b3d40bf801fa51307e72442"
+    },
+    {
+      "path": "index.html",
+      "bytes": 1348,
+      "sha256": "41d0132d3d89868e08957ecbd2a06591cd9c788899a580b30d429d491fef04a3"
+    },
+    {
+      "path": "mechanisms.js",
+      "bytes": 24702,
+      "sha256": "b9386571804477b655f0dd7464acf4e7e2080937c1148a3de01ae91073461e5f"
+    },
+    {
+      "path": "metrics.js",
+      "bytes": 36218,
+      "sha256": "7cc604a284655feeae9d4d5b961ccc8c01a151d6812fa74b58103bde4500aff0"
+    },
+    {
+      "path": "panel-import.js",
+      "bytes": 14341,
+      "sha256": "c1c3d70c6ed1ac787b850b17d6dc823d00cf735a88d8148988df66e1d1f49e10"
+    },
+    {
+      "path": "recommendations.js",
+      "bytes": 206506,
+      "sha256": "79c2b870ac206a451cfcef6efe7cd6d586dd4b03b03f25e05ff6dc447b3b9188"
+    },
+    {
+      "path": "resident-panel.js",
+      "bytes": 7220,
+      "sha256": "cb372246d267af18da10873be520315769976be6e89b162879a42f1827399e4d"
+    },
+    {
+      "path": "settlement-panel.js",
+      "bytes": 4435,
+      "sha256": "3876cd6cde83d17ba3feebd8f61b647163feab0f264ca36a5b1ad5589931e702"
+    },
+    {
+      "path": "style.css",
+      "bytes": 24477,
+      "sha256": "2077bccd064b4e62eb06507e5546dcee48b6d9b6756e0cb26afecdf37643a34d"
+    },
+    {
+      "path": "support-panels.js",
+      "bytes": 22563,
+      "sha256": "e68176fef6d228f32b06e5f8b0d702f7634ecb9ab11d1f7791e23f0ed8ca62a1"
+    },
+    {
+      "path": "support-presets.js",
+      "bytes": 17912,
+      "sha256": "ec3a9cb8b984a136153f55cb802db6d32e35a13458359aff5b9602d1cad64c7c"
+    },
+    {
+      "path": "team.js",
+      "bytes": 59196,
+      "sha256": "142a7e62e7a9f622ee42bb6b52183c3e4e7f12275e3a258cd17ce35df4a3e17d"
+    },
+    {
+      "path": "teyvat-offline.zip",
+      "bytes": 14895828,
+      "sha256": "2bf5aa7df1a9aaf5984134af1bb76b302460b23eaaac4827f8941751e27e8007"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.txt",
+      "bytes": 5184,
+      "sha256": "28f3138d983fe9e35c65860f24de6d425898f56d882fb0a5393723434d7a1530"
+    },
+    {
+      "path": "USER_GUIDE.html",
+      "bytes": 29738,
+      "sha256": "49cf18738dd1dc1dc3d3ad8eac1145bb207ea0a538099c13f7fb86bce923ee9b"
+    },
+    {
+      "path": "vendor/ocr/core/tesseract-core-lstm.wasm.js",
+      "bytes": 3896484,
+      "sha256": "eef5f8b2f8e20e150680b20adaec4a60babafee3adbe8a94583c81fee46e8680"
+    },
+    {
+      "path": "vendor/ocr/core/tesseract-core-relaxedsimd-lstm.wasm.js",
+      "bytes": 3905767,
+      "sha256": "861a536cf9ef8e63cb644d57bab39c388f37f7d6b6f60024b741c5f6b39a59b3"
+    },
+    {
+      "path": "vendor/ocr/core/tesseract-core-relaxedsimd.wasm.js",
+      "bytes": 4697227,
+      "sha256": "843074aa5bad1cc6421b74a86201768ced9f244795e4d81435435a61a40ce535"
+    },
+    {
+      "path": "vendor/ocr/core/tesseract-core-simd-lstm.wasm.js",
+      "bytes": 3899472,
+      "sha256": "c58b46a4c796c0b8afccf77591d5b875b6896b45d402bbce8caa6f5362447b38"
+    },
+    {
+      "path": "vendor/ocr/core/tesseract-core-simd.wasm.js",
+      "bytes": 4690932,
+      "sha256": "6b61ef4e911b5cf57e656bbfe983d6e2b3711a02dd164154ddda064566e8e09d"
+    },
+    {
+      "path": "vendor/ocr/core/tesseract-core.wasm.js",
+      "bytes": 4687944,
+      "sha256": "0bc6ce3e5fbbd0cd89706cf2fd70960e3372f4f01ee24265b26990808aaeb286"
+    },
+    {
+      "path": "vendor/ocr/lang/chi_sim.traineddata.gz",
+      "bytes": 1718768,
+      "sha256": "b8a23f10c7de500891eb458a8adc9cc58ab7f242f08b7d149f5e9aea4ad5db7c"
+    },
+    {
+      "path": "vendor/ocr/lang/eng.traineddata.gz",
+      "bytes": 2952873,
+      "sha256": "45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91"
+    },
+    {
+      "path": "vendor/ocr/LICENSE-core",
+      "bytes": 11358,
+      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08"
+    },
+    {
+      "path": "vendor/ocr/LICENSE-model",
+      "bytes": 10173,
+      "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9"
+    },
+    {
+      "path": "vendor/ocr/LICENSE-tesseract-js.md",
+      "bytes": 11357,
+      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+    },
+    {
+      "path": "vendor/ocr/manifest.json",
+      "bytes": 3972,
+      "sha256": "6b7ffd1bce897a9803c13d241b10087a03a92256255a9a3456660b6301a45f54"
+    },
+    {
+      "path": "vendor/ocr/tesseract.min.js",
+      "bytes": 62961,
+      "sha256": "000c27d9cd0def655f77b36c72a389c0ab13793aa31cb4d7aab56d09c0afbc7e"
+    },
+    {
+      "path": "vendor/ocr/tesseract.min.js.LICENSE.txt",
+      "bytes": 149,
+      "sha256": "cdf963ced7d25a0f98901a547647b4d6e2dbe0197fd78c87a059a87b0e542fe2"
+    },
+    {
+      "path": "vendor/ocr/worker.min.js",
+      "bytes": 111307,
+      "sha256": "576b7df7e3393e137e51849357c9adb53fe7ac1bb69bfa06cf3d61520f182c6d"
+    },
+    {
+      "path": "vendor/ocr/worker.min.js.LICENSE.txt",
+      "bytes": 466,
+      "sha256": "45f54171aeaa1d10c0c1a66f374b7bba1f02472b1487fbe892eec04f840002ac"
+    }
+  ]
+}
