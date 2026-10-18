@@ -1,10 +1,10 @@
 {
-  "sourceCommit": "499e644efd36163525717a422386ae04328864ee",
+  "sourceCommit": "4d27305f900e5c2ba586abd657dacfdadf82e6a6",
   "files": [
     {
       "path": "app.js",
-      "bytes": 115306,
-      "sha256": "cab51a5f0faf1cb013782bade0815f42f0266fa24d7eb2b054d774243311d6df"
+      "bytes": 114955,
+      "sha256": "8931d62889ef98a1ed160c37efbc325da89d6ed1461154bd5640d5da3b6cf0cf"
     },
     {
       "path": "artifacts.js",
@@ -63,8 +63,8 @@
     },
     {
       "path": "style.css",
-      "bytes": 24477,
-      "sha256": "2077bccd064b4e62eb06507e5546dcee48b6d9b6756e0cb26afecdf37643a34d"
+      "bytes": 23769,
+      "sha256": "6a87602818a66e1e20212734fd71490e7e9e575c43aa9032c9fc3634759996b5"
     },
     {
       "path": "support-panels.js",
@@ -83,8 +83,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14895828,
-      "sha256": "2bf5aa7df1a9aaf5984134af1bb76b302460b23eaaac4827f8941751e27e8007"
+      "bytes": 14895524,
+      "sha256": "4ae629d019f5ff05bf07c51d282897a31219c348cf2b9e4b5296a5df84d32df9"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
