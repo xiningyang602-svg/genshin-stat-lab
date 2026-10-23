@@ -1,0 +1,32 @@
+name: Prepare verified offline bundle
+on:
+  push:
+    branches: [codex-element-cup-publish-20261023]
+    paths: ['.offline-publish-20261023/manifest.json']
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble and verify the existing local release
+        run: |
+          python3 - <<'PY'
+          import base64,hashlib,json,pathlib,shutil,subprocess
+          root=pathlib.Path.cwd()
+          folder=root/'.offline-publish-20261023'
+          spec=json.loads((folder/'manifest.json').read_text())
+          payload=base64.b64decode(''.join((folder/n).read_text() for n in spec['parts']),validate=True)
+          assert hashlib.sha256(payload).hexdigest()==spec['sha256']
+          (root/'teyvat-offline.zip').write_bytes(payload)
+          release=json.loads((root/'release-manifest.json').read_text())
+          for item in release['files']:
+              assert hashlib.sha256((root/item['path']).read_bytes()).hexdigest()==item['sha256'],item['path']
+          shutil.rmtree(folder)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- teyvat-offline.zip .offline-publish-20261023
+          git commit -m 'Assemble verified offline release for elemental goblet fix'
+          git push origin HEAD:codex-element-cup-publish-20261023
