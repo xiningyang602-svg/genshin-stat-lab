@@ -7,6 +7,14 @@
   const extraInputs={白术:['hp'],布伦妮:['atk'],杜林:['atk'],莱依拉:['hp'],'旅行者·雷':['recharge'],妮露:['hp'],七七:['atk'],希格雯:['hp'],闲云:['atk'],'梦见月瑞希':['mastery']};
   function scene(c){const rx=c._metric?.reaction||'',cond=c.conditions||{},indirect=(c._metric?.entries||[]).some(x=>/\.reaction\(|['"]fy['"]/.test(E.resolveDetail(c,x.index)?.dmg?.toString()||''));return {rx,indirect,star:['stellarConduct','stellarSwirl','stellarVortex'].includes(rx),moon:rx.startsWith('lunar'),sc:rx==='stellarConduct'||!rx&&!!cond.stellarField,ss:['stellarSwirl','stellarVortex'].includes(rx)||!rx&&!cond.stellarField&&!!cond.vortexActive,title:c._metric?.title||'',element:E.character(c.character)?.element};}
   function reactionElement(c){const s=scene(c);if(['pyro','hydro','cryo','electro'].includes(s.element))return s.element;if(s.ss)return 'cryo';return (c.teammates||[]).map(t=>E.character(t.character)?.element).find(e=>['pyro','hydro','cryo','electro'].includes(e))||'cryo';}
+  function nilouGoldenState(c,t={}){
+    const people=[{character:c.character,castE:true},...(c.teammates||[])].filter(x=>E.character(x.character)),fullMoon=people.filter(x=>g.GTeam?.MOON.includes(x.character)).length>=2;
+    const elements=people.map(x=>E.character(x.character).element),eligible=(c.supportMode==='full'||t.castE)&&elements.every(e=>['hydro','dendro'].includes(e))&&elements.includes('hydro')&&elements.includes('dendro');
+    const conversion=fullMoon&&people.some(x=>x.character==='奈芙尔'&&(c.supportMode==='full'||x.castE)),mode=['on','off'].includes(t.nilouGoldenEmMode)?t.nilouGoldenEmMode:'auto';
+    const active=!!eligible&&(mode==='on'||mode==='auto'&&!conversion);
+    const reason=!eligible?'水草队伍或E舞步条件未满足，不计金杯100精通':mode==='on'?'已确认受到草元素攻击，100精通仍在10秒内':mode==='off'?'未触发或100精通已过10秒':conversion?'奈芙尔满辉开E后种子不迸发，默认未触发100精通；开E前自伤或敌方草攻击仍可另行触发':'按丰穰之核自伤触发100精通，持续10秒';
+    return {active,conversion,eligible:!!eligible,mode,reason};
+  }
   function preset(c){
     if(c.supportMode!=='full'||c._scope==='solo'||!(c.teammates||[]).some(t=>t.character))return c;
     const T=g.GTeam,s=scene(c),people=[c.character,...(c.teammates||[]).map(t=>t.character)].map(E.character).filter(Boolean),elements=new Set(people.map(x=>x.element)),cond=c.conditions||(c.conditions={});
@@ -33,7 +41,7 @@
       if(x.scrollElements.length<2)x.scrollElements.push(own==='hydro'?'electro':'hydro');
       x.reactionElements=[...new Set(['electro',x.element])];if(x.reactionElements.length<2)x.reactionElements.push('hydro');
       if(t.character==='申鹤')x.mode=/普攻|普通攻击|重击|下落|N1/.test(s.title)?'hold':'tap';
-      if(t.character==='哥伦比娅'){x.mode=s.rx==='lunarCrystallize'?'lunarCrystallize':s.rx==='lunarBloom'?'lunarBloom':'lunarCharged';x.c6Reaction='all';}
+      if(t.character==='哥伦比娅'){const reaction=s.rx||c._metric?.partyReaction;x.mode=reaction==='lunarCrystallize'?'lunarCrystallize':reaction==='lunarBloom'?'lunarBloom':'lunarCharged';x.c6Reaction='all';}
       if(t.character==='奥黛塔'){x.mode=s.ss?'stellarSwirl':s.sc?'stellarConduct':'off';x.blessingFull=true;}
       return x;
     });
@@ -109,7 +117,7 @@
       case '洛恩':if(castE&&cryoReaction)add('atkPct',15,name+'冰相关反应');if(cons>=2&&active)add('mastery',200,name+'C2');break;
       case '玛薇卡':if(castQ&&onField)add('allDmg',cons>=4?50:40,name+'Q满200战意'+(cons>=4?' C4':'初始时点'));if(castE&&cons>=2)add('enemyDef',20,name+'C2火环');break;
       case '米卡':if(castE&&onField){const cap=cons>=6?5:4,n=Math.min(cap,Math.max(0,nEnemies-1)+1+(cons>=2?1:0));elementBonus('physical',n*10,name+'侦明 '+n+'层（'+nEnemies+'目标）');if(cons>=6)add('cdmg_physical',60,name+'C6');notes.push(name+'攻速不增加固定段数指标的命中数');}break;
-      case '妮露':if(Object.keys(count).every(e=>['hydro','dendro'].includes(e))&&count.hydro&&count.dendro&&castE){add('mastery',100,name+'金杯');add('bloom',Math.min(400,Math.max(0,need(t,'hp')-30000)*.009),name+'丰穰之核');if(cons>=2){add('res_hydro',35,name+'C2');add('res_dendro',35,name+'C2');}}break;
+      case '妮露':if(Object.keys(count).every(e=>['hydro','dendro'].includes(e))&&count.hydro&&count.dendro&&castE){const golden=nilouGoldenState(config,t);if(golden.active)add('mastery',100,name+'金杯');else notes.push(name+'金杯：'+golden.reason);add('bloom',Math.min(400,Math.max(0,need(t,'hp')-30000)*.009),name+'丰穰之核');if(cons>=2){add('res_hydro',35,name+'C2');add('res_dendro',35,name+'C2');}}break;
       case '欧洛伦':if(cons>=6&&active&&onField)add('atkPct',30,name+'C6三层');break;
       case '绮良良':if(cons>=6&&(castE||castQ))add('allElementDmg',12,name+'C6');break;
       case '托马':if(cons>=6&&castQ)for(const k of ['aDmg','a2Dmg','a3Dmg'])add(k,15,name+'C6');break;
@@ -128,6 +136,6 @@
     if(name==='梦见月瑞希'&&cons>=1&&active&&['swirl','stellarSwirl'].includes(s.rx))addFlat(t,'reaction',need(t,'mastery')*(s.rx==='swirl'?11:5.5),1,{reactions:[s.rx],residualMark:true,indirectOnly:s.rx==='stellarSwirl'});
     if(neutral.includes(name))notes.push(name+'：'+(name==='丝柯克'?'诸武相授按真实全水冰资格计算':name==='卡维'||name==='梦见月瑞希'?'本人站场状态不与前台主C同时计入':name==='莱欧斯利'||name==='塔利雅'?'攻速不增加当前固定命中数':'角色本体无额外共享伤害数值；仍计算已选武器、套装及共鸣'));
   }
-  g.GSupport={fixed,neutral,extraInputs,scene,preset,inputs,talentInfo,effects,reactionElement};
+  g.GSupport={fixed,neutral,extraInputs,scene,preset,inputs,talentInfo,effects,reactionElement,nilouGoldenState};
   if(typeof module!=='undefined')module.exports=g.GSupport;
 })(typeof globalThis!=='undefined'?globalThis:this);

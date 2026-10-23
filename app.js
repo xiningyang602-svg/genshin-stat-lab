@@ -44,6 +44,7 @@
       if(out.character==='恰斯卡'&&cons>=6)for(const i of [0,1,2,3])addPair('detail-'+i,'chasca-c6-'+i);
       out.metricIds=[...ids];
     }
+    if(out.character==='奈芙尔'&&Array.isArray(out.metricIds))out.metricIds=[...new Set(out.metricIds.map(id=>/^detail-[0-48]$/.test(id)?'nefer-ca':/^detail-[56]$/.test(id)?'nefer-q':id))];
     out.metricRevision=1;
     for(const key of ['rotation','teammates','teamRows','contributors','disabledBuffs','sets'])if(!Array.isArray(out[key]))throw new Error(key+' 应是列表。');
     if(out.rotation.length>160||out.teammates.length>3||out.contributors.length>3||out.teamRows.length>100)throw new Error('配置中的技能项、队友或增益过多。');
@@ -196,6 +197,7 @@
         slots+='<div class="fields" style="margin-top:8px">'+field('命座','teammates.'+i+'.cons','number',{numeric:true,options:[0,1,2,3,4,5,6].map(n=>[n,n+'命'])})+field('精炼','teammates.'+i+'.refine','number',{numeric:true,options:[1,2,3,4,5].map(n=>[n,n])})+field('武器（90级）','teammates.'+i+'.weapon','text',{wide:true,options:Guides.weaponOptions(c.key)})+'</div>'+
           '<div style="margin-top:8px">'+talentFields(i)+'</div>'+
           '<div class="fields" style="margin-top:8px">'+(window.GTeam?.supportInputs(t,full||config.supportPanelMode==='base'?current:undefined)||[]).map(k=>field((config.supportPanelMode==='base'?'单人常驻':'增益计算时')+({atk:'攻击力',hp:'生命值',def:'防御力',mastery:'元素精通',cpct:'暴击率 %',recharge:'充能效率 %'})[k],'teammates.'+i+'.panel.'+k,'number',{placeholder:config.supportPanelMode==='base'?'不含队友、共鸣、临时效果':'填写实际值'})).join('')+field('队友套装','teammates.'+i+'.set','text',{wide:true,options:Guides.artifactOptions(c.key,{support:true})})+'</div>'+supportInputOptions(t,current,i)+
+          (c.key==='妮露'?field('金杯100精通的独立触发状态','teammates.'+i+'.nilouGoldenEmMode','text',{wide:true,value:t.nilouGoldenEmMode||'auto',options:[['auto','自动判断种子能否自伤'],['on','已受草元素攻击，100精通仍在10秒内'],['off','未触发 / 已过10秒']],help:window.GSupport.nilouGoldenState(current,t).reason+'。金杯本身、C2减抗与圣显之钥分别判断。'}):'')+
           '<p class="help">'+esc(full?'角色、已选武器与套装的可用增益默认满足触发条件。':window.GTeam?.supportDescription?.(c.key)||'队友面板与技能状态用于核算实际增益。')+'</p>'+
           (full?autoSupportSummary(t,current,i):'<div class="fields" style="margin-top:8px">'+(window.GTeam?.stackNames[c.key]?field(window.GTeam.stackNames[c.key],'teammates.'+i+'.stacks','number',{min:0}):c.key==='艾尔海森'?field('Q消耗琢光镜数量（0–3）','teammates.'+i+'.stacks','number',{min:0,max:3}):'')+
           (window.GTeam?.resourceNames[c.key]?field(window.GTeam.resourceNames[c.key][0],'teammates.'+i+'.resources','number',{min:0,placeholder:'起手值 '+window.GTeam.resourceNames[c.key][1]+'，按实际修改'}):'')+

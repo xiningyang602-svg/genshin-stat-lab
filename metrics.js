@@ -78,7 +78,7 @@
       '阿蕾奇诺':{BondOfLife:200},
       '玛薇卡':{mavuikaFightingSpirit:200,mavuikaQBuffDmg:c>=4?50:40,mavuikaBurstActive:true,mavuikaC1Active:c>=1,mavuikaNightsoulBurstActive:true},
       '兹白':{zibaiShiftActive:true,zibaiMoonfallActive:true,zibaiC4Splendor:c>=4,zibaiC6Active:c>=6,zibaiRadianceSpent:c>=6?100:70},
-      '奈芙尔':{Veil_of_Falsehood:5,neferShadowDanceActive:c>=4},'菲林斯':{flinsC2ShredActive:c>=2},
+      '奈芙尔':{Veil_of_Falsehood:c>=2?5:3,neferShadowDanceActive:c>=4},'菲林斯':{flinsC2ShredActive:c>=2},
       '恰斯卡':{chascaC6OnslaughtActive:c>=6},'基尼奇':{kinichC2ShredActive:c>=2,kinichHunterStacks:2},
       '桑多涅':{sandronePrismPowerOver50:true,sandroneBeamC2Stacks:c>=2?3:0},
       '奥黛塔':{odetteSelfSplendor:c>=1?6:4,odetteBurstDreamActive:true,odetteImageActive:true},
@@ -110,7 +110,7 @@
     if(key==='那维莱特')v.neuvStacks=b?3:Math.min(3,Number(c.neuvStacks||0)+(config.cons>=1?1:0));
     if(key==='雷电将军')v.num=b?60:Number(c.soloResolve||0);
     if(key==='薇斯纳'){v.vesnaOrder=b?6:Number(c.vesnaOrder||0);v.num1=b?3:Number(c.vesnaCryoAnemo||1);v.num2=b?1:Number(c.vesnaOthers||0);}
-    if(key==='奈芙尔')v.Veil_of_Falsehood=b?5:Number(c.veil||0);
+    if(key==='奈芙尔')v.Veil_of_Falsehood=b?(config.cons>=2?5:3):Number(c.veil||0);
     if(key==='洛恩')Object.assign(v,{争胜:b?(config.cons>=1?300:100):Number(c.lohenStacks||0),lohenHighSpirits:b||!!c.lohenHighSpirits,lohenNormalBuffActive:b||!!c.lohenNormalBuffActive});
     if(key==='纳西妲')Object.assign(v,{nahidaQFieldActive:true,nahidaMarked:true,nahidaMarkedEnemies:1});
     if(key==='芙宁娜')Object.assign(v,{fanfare:b?(config.cons>=1?400:300):Number(c.soloFanfare||0),furinaC2HP:b&&config.cons>=2?140:Number(c.furinaC2HP||0),furinaDrainers:b?4:1});
@@ -123,7 +123,7 @@
       '那维莱特':[n('neuvStacks','古海孑遗目标总层数（包含C1；组队按可触发种类封顶）',3)],
       '雷电将军':[n('num','本次Q已有愿力（预叠状态）',60)],
       '薇斯纳':[n('vesnaOrder','本次技能整肃层数',6),['num1','天赋计数：冰/风人数',1,4,3],n('num2','天赋计数：其他元素人数',3)],
-      '奈芙尔':[n('Veil_of_Falsehood','伪秘之帷目标层数（需满辉）',5)],
+      '奈芙尔':[n('Veil_of_Falsehood','伪秘之帷层数（随命座上限；需满辉）',config.cons>=2?5:3)],
       '洛恩':[n('争胜','本次技能已有争胜',config.cons>=1?300:100),['lohenHighSpirits','乘兴：战技天赋+1有效','bool'],['lohenNormalBuffActive','已触发普重增伤','bool']],
       '纳西妲':[['nahidaQFieldActive','摩耶之殿领域有效','bool'],['nahidaMarked','目标带有蕴种印','bool'],n('nahidaMarkedEnemies','带有标记的敌人数',20)],
       '芙宁娜':[n('fanfare','本次已有气氛值',config.cons>=1?400:300),n('furinaC2HP','C2已获得生命提升 %',140),n('furinaDrainers','本次可消耗生命的角色数（组队按人数封顶）',4)],
@@ -141,6 +141,10 @@
       if(cons>=6)result.push(make('sandrone-sc-c6','C6额外星超导（单段）',[row(7,{sandroneC6ExtraHits:1})],{reaction:'stellarConduct',mode:'sc'}));
       result.push(make('sandrone-sweep','重击扫射（普通冰伤）',[row(0)]));
       return result;
+    }
+    if(key==='奈芙尔'){
+      const c6=cons>=6;
+      return [make('nefer-ca',c6?'开E后一次重击·月绽放总伤害（6命5段）':'开E后一次重击·三段月绽放总伤害',[row(2),row(3),row(4),...(c6?[row(1),row(8)]:[])],{reaction:'lunarBloom',partyReaction:'lunarBloom',recommended:true,note:c6?'统计虚影三段、6命转化的自身第二击和6命追加月绽放；不含自身第一击普通草伤。':'统计一次幻戏的虚影第1、2、3段月绽放；不含自身两次普通草伤。各段独立结算倍率和辅助限次附加伤害。'}),make('nefer-q','大招总伤害（两段，默认满帷增益）',[row(5),row(6)],{reaction:null,partyReaction:'lunarBloom',recommended:true,note:'大招两段均为普通草元素伤害，按施放前伪秘之帷计算增伤；队伍按月绽放状态准备辅助，不把大招转成月绽放。'})];
     }
     if(key==='丝柯克'){
       const i=R[key].details.findIndex(d=>d.metricKey==='skirk-n5');
@@ -238,7 +242,7 @@
     }
     if(c.key==='薇斯纳'&&!assumeParty){v.num1=scope==='solo'?1:Number(config.conditions?.vesnaCryoAnemo||1);v.num2=scope==='solo'?0:Number(config.conditions?.vesnaOthers||0);}
     if(c.key==='那维莱特'){const target=Number(v.neuvStacks),c1=config.cons>=1?1:0,possible=new Set((config.teammates||[]).map(t=>E.character(t.character)?.element).filter(e=>e&&e!=='hydro')).size+c1;v.neuvStacks=scope==='solo'?(assumeParty?Math.max(c1,Math.min(3,target)):c1):Math.max(c1,Math.min(3,target,possible));}
-    if(c.key==='奈芙尔'&&moonsign<2)v.Veil_of_Falsehood=0;
+    if(c.key==='奈芙尔')v.Veil_of_Falsehood=moonsign<2?0:Math.max(0,Math.min(config.cons>=2?5:3,Number(v.Veil_of_Falsehood??0)));
     if(c.key==='芙宁娜'){if(scope==='team')v.furinaDrainers=Math.min(p.partySize,Number(v.furinaDrainers));if(p.currentHpPct<=50&&scope==='solo'&&!assumeParty)v.furinaDrainers=0;}
     if(c.key==='八重神子'&&s.states.yaeRank===undefined)v.yaeRank=config.cons>=2?4:3;
     if(c.key==='神里绫人'&&s.states.ayatoNamisenStacks===undefined)v.ayatoNamisenStacks=config.cons>=2?5:4;
