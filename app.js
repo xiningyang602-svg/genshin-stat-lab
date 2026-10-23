@@ -49,6 +49,7 @@
     for(const key of ['rotation','teammates','teamRows','contributors','disabledBuffs','sets'])if(!Array.isArray(out[key]))throw new Error(key+' 应是列表。');
     if(out.rotation.length>160||out.teammates.length>3||out.contributors.length>3||out.teamRows.length>100)throw new Error('配置中的技能项、队友或增益过多。');
     for(const t of out.teammates)if(t?.character&&!E.character(t.character))throw new Error('配置含未知队友。');
+    out.minRecharge={solo:100,team:100};out.reservedRechargeRolls={solo:0,team:0};
     return out;
   }
   function get(path,obj=config){return path.split('.').reduce((o,k)=>o?.[k],obj);}
@@ -112,12 +113,9 @@
   }
   function characterCard() {
     const c=E.character(config.character);
-    const chars=['那维莱特','胡桃','艾尔海森','兹白','菲林斯','奈芙尔','薇斯纳','桑多涅'];
     const levels=Object.keys(c.stats.details).filter(k=>['80','80+','90','100'].includes(k));
     return card('角色与武器','<div class="character-box"><input id="character-search" aria-label="搜索角色名称" value="'+esc(config.character)+'" autocomplete="off"><span class="search-mark">⌕</span><div id="character-results" class="character-results hidden"></div></div>'+
-      '<div class="character-meta"><span class="element '+c.element+'">'+E.ELEMENT[c.element]+'</span>'+c.star+'星 · '+E.WEAPON[c.weapon]+'<span> / '+esc(c.title)+'</span></div>'+
-      (c.talentMale?'<div class="fields">'+field('旅行者','travelerGender','text',{wide:true,options:[['female','荧'],['male','空']]})+'</div>':'')+
-      '<div class="quick-chars">'+chars.map(k=>'<button class="chip'+(k===config.character?' selected':'')+'" data-character="'+k+'">'+k+'</button>').join('')+'</div>'+
+      (c.talentMale?'<div class="fields character-variant">'+field('旅行者','travelerGender','text',{wide:true,options:[['female','荧'],['male','空']]})+'</div>':'')+
       '<div class="fields">'+field('角色等级','level','text',{options:levels.map(k=>[k,k+'级'])})+field('命座','cons','number',{numeric:true,options:[0,1,2,3,4,5,6].map(n=>[n,n+'命'])})+'</div>'+
       '<div class="divider"></div><div class="fields">'+field('武器（90级）','weapon','text',{wide:true,options:Guides.weaponOptions(c.key,{custom:true})})+
       field('武器精炼','refine','number',{numeric:true,options:[1,2,3,4,5].map(n=>[n,'精炼'+n])})+'<div class="field"><label>一个词条的单位</label><span class="stat-pill">五星四档平均 · 暴率 3.305%</span></div></div>'+
@@ -128,13 +126,12 @@
     return card('五件圣遗物','<div class="stat-pills"><span class="stat-pill">生之花 · 生命值 +4,780</span><span class="stat-pill">死之羽 · 攻击力 +311</span></div>'+
       '<div class="fields">'+Object.keys(mainOptions).map(slot=>field(({sands:'时之沙主属性',goblet:'空之杯主属性',circlet:'理之冠主属性'})[slot],'mains.'+slot,'text',{wide:slot==='circlet',options:[['','请选择主属性'],...mainOptions[slot].map(k=>[k,E.LABELS[k]+' +'+E.MAIN[k]+(k==='mastery'?'':'%')])]})).join('')+'</div>'+
       '<div class="divider"></div><div class="fields">'+field('套装效果','setChoice','text',{wide:true,options:Guides.artifactOptions(config.character)})+
-      (config.setChoice==='two'?['0','1'].map(i=>field('两件套 '+(Number(i)+1),'sets.'+i+'.name','text',{wide:true,options:[['','请选择两件套'],...D.artifacts.filter(a=>a.maxRarity===5).map(a=>[a.name,a.name])]})).join(''):'')+'</div><p class="help">主角色按五星、20级圣遗物计算。伤害杯可选择具体元素；月/星伤害不直接使用普通元素伤害加成。推荐四件套包含条件项，请核对下方触发状态；二加二仍按两件套效果另选。</p>',{tag:'02 / ARTIFACTS'});
+      (config.setChoice==='two'?['0','1'].map(i=>field('两件套 '+(Number(i)+1),'sets.'+i+'.name','text',{wide:true,options:[['','请选择两件套'],...D.artifacts.filter(a=>a.maxRarity===5).map(a=>[a.name,a.name])]})).join(''):'')+'</div>',{tag:'02 / ARTIFACTS'});
   }
   function budgetCard() {
     return card('有效副词条预算','<div class="budget-line"><div><h3>等效词条总数</h3><small>花、羽、沙、杯、冠的有效副词条合计</small></div><input type="number" min="0" max="60" step="0.1" data-path="budget" id="budget-number" value="'+esc(config.budget)+'" aria-label="有效词条总数"></div><input class="range" id="budget-range" type="range" min="0" max="60" step="0.5" value="'+esc(config.budget)+'" aria-label="有效词条滑动条"><div class="range-label"><span>0</span><span>20</span><span>40</span><span>60</span></div>'+
-      '<div class="divider"></div><div class="fields">'+field('单人额外保留充能词条','reservedRechargeRolls.solo','number',{min:0})+field('组队额外保留充能词条','reservedRechargeRolls.team','number',{min:0})+field('单人最低充能 %','minRecharge.solo','number',{min:100})+field('组队最低充能 %','minRecharge.team','number',{min:100})+'</div>'+
       '<div class="divider"></div><div class="fields">'+field('分配结果的显示方式','allocationView','text',{wide:true,options:[['both','连续分配 + 可实现的五件方案'],['theory','连续分配方向'],['material','只显示可实现的五件方案']]})+['生之花','死之羽','时之沙','空之杯','理之冠'].map((label,i)=>field(label+'起始副词条','artifactStarts.'+i,'number',{numeric:true,options:[[4,'4条初始（理论上限）'],[3,'3条初始']]})).join('')+'</div>'+
-      '<p class="help">额外保留的充能不占上方有效预算；每条为5.505%充能。若充能本身能转伤，进一步优化的充能才计入直接增伤预算。三个主词条固定后，只搜索确实影响所选目标的属性。</p>'+rollConversionInfo(),{tag:'03 / SUBSTATS'});
+      '<p class="help">三个主词条固定后，只搜索确实影响所选伤害指标的属性。</p>'+rollConversionInfo(),{tag:'03 / SUBSTATS'});
   }
   function rollConversionInfo(){try{const costs=E.rollCosts(config);return '<details class="method-details"><summary>平均词条单位与小词条折算</summary><p>攻击/生命 '+E.ROLLS.atkPct+'%；防御 '+E.ROLLS.defPct+'%；暴率 '+E.ROLLS.cpct+'%；暴伤 '+E.ROLLS.cdmg+'%；精通 '+E.ROLLS.mastery+'；充能 '+E.ROLLS.recharge+'%。</p><p>小攻击平均'+E.ROLLS.atkPlus+'点 = '+fmt(costs.atkPlus,4)+'条大攻击；小生命平均'+E.ROLLS.hpPlus+'点 = '+fmt(costs.hpPlus,4)+'条大生命；小防御平均'+E.ROLLS.defPlus+'点 = '+fmt(costs.defPlus,4)+'条大防御。</p><p>攻击基数是90级角色 + 所选武器基础攻击；生命与防御基数为90级角色本体。花和羽毛主属性不计入副词条预算。</p></details>';}catch{return '<p class="help">选择武器后显示小词条折算值。</p>';}}
   function activeMetric(){return M.selected(config).find(m=>m.id===goal)||M.selected(config)[0];}
@@ -413,6 +410,7 @@
     pendingOcrUi();
   }
   function sync() {
+    config.minRecharge={solo:100,team:100};config.reservedRechargeRolls={solo:0,team:0};
     config.metricSettings=M.settings(config);config.supportMode=config.supportMode||'full';
     if(Array.isArray(config.metricIds)){const allowed=new Set(M.definitions(config).map(m=>m.id));config.metricIds=config.metricIds.filter(id=>allowed.has(id));}
     config.rollQuality='average';config.normalizedBudget=true;
@@ -449,7 +447,6 @@
     if(!Array.isArray(config.artifactStarts)||config.artifactStarts.length!==5||config.artifactStarts.some(n=>![3,4].includes(n)))throw new Error('请确认五件圣遗物起始副词条各为3条或4条。');
     numeric('敌人等级',config.enemy.level,1,200,true);numeric('附近敌人数',config.enemy.count??1,1,20,true);numeric('敌人抗性',config.enemy.resistance,-100,1000);
     for(const k of ['a','e','q'])numeric('主角色天赋',config.talents[k],1,10,true);
-    for(const s of ['solo','team']){numeric('额外保留充能词条',config.reservedRechargeRolls[s],0,45);numeric('最低充能',config.minRecharge[s],100,1000);}
     for(const r of config.teamRows||[])if(!buffFields[r.key]||r.value===''||!Number.isFinite(Number(r.value)))throw new Error('补充增益的类型和数值需要有效填写。');
     for(const s of config.sets||[])if(!D.artifacts.some(a=>a.name===s.name&&a.maxRarity===5))throw new Error('主角色请选择五星套装。本计算的词条单位与主属性为五星20级。');
     if(config.weapon==='custom')numeric('自定义武器白字',config.customWeapon.base,1,2000);
