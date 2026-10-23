@@ -1,10 +1,10 @@
 {
-  "sourceCommit": "db1074c3221797d5adb2339e6764c7935948b8fe",
+  "sourceCommit": "ba5bc4e0b099410a2194b010f39dba9e8ee35066",
   "files": [
     {
       "path": "app.js",
-      "bytes": 112069,
-      "sha256": "038833ef6f008a42bb6b882fd2e0aa280480ce000ce2181425bc661032687cb2"
+      "bytes": 107435,
+      "sha256": "f91d766d4c3f429d4ba1d4485d7c1bbddf8bcd90142e9952603a3cb63c4aa0aa"
     },
     {
       "path": "artifacts.js",
@@ -29,7 +29,7 @@
     {
       "path": "index.html",
       "bytes": 1520,
-      "sha256": "eb225b8d8c3a95e6036c4183c6f42fa9668bfe182d4ce6a7a31f1968963c3090"
+      "sha256": "4b4e913296549401bf3373212d5cb08f92c04023cde6175ea59116c6cce334ac"
     },
     {
       "path": "mechanisms.js",
@@ -63,8 +63,8 @@
     },
     {
       "path": "style.css",
-      "bytes": 24175,
-      "sha256": "acc63e66089e5bf7cac69a7d9dfe4b1259e81354cc3610e4696d7e74f4d7e0a4"
+      "bytes": 24664,
+      "sha256": "b95e6a57ff86c14be4dd65ace5bd39dfa0e71ebff9cb8051580cd49c77c3dd0c"
     },
     {
       "path": "support-panels.js",
@@ -83,8 +83,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14874551,
-      "sha256": "71d2afe0aedbd482f7cfc9f5c0e4318f7f7892ac6fb56b1287c3d3841c149ead"
+      "bytes": 14872948,
+      "sha256": "11a0cce69ea20460fcbbe921fa12cd700f679086c35b60b52ecc2a17fd90821b"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
@@ -93,8 +93,8 @@
     },
     {
       "path": "USER_GUIDE.html",
-      "bytes": 29459,
-      "sha256": "a7ee5da20c3c94956bd539505ae074a09465cc3297d74848390763b6612a8ed1"
+      "bytes": 29634,
+      "sha256": "36a4ff8945df80b15c0f25b329c1c5012597e83fcd664edf4ee44596f983e052"
     },
     {
       "path": "vendor/ocr/core/tesseract-core-lstm.wasm.js",
