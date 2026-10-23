@@ -10,7 +10,7 @@
   function nilouGoldenState(c,t={}){
     const people=[{character:c.character,castE:true},...(c.teammates||[])].filter(x=>E.character(x.character)),fullMoon=people.filter(x=>g.GTeam?.MOON.includes(x.character)).length>=2;
     const elements=people.map(x=>E.character(x.character).element),eligible=(c.supportMode==='full'||t.castE)&&elements.every(e=>['hydro','dendro'].includes(e))&&elements.includes('hydro')&&elements.includes('dendro');
-    const conversion=fullMoon&&people.some(x=>x.character==='奈芙尔'&&(c.supportMode==='full'||x.castE)),mode=['on','off'].includes(t.nilouGoldenEmMode)?t.nilouGoldenEmMode:'auto';
+    const conversion=fullMoon&&people.some(x=>x.character==='奈芙尔'&&(c.supportMode==='full'||x.castE)),mode=c.character==='奈芙尔'&&t.character==='妮露'?(t.nilouGoldenEmMode==='on'?'on':'off'):'auto';
     const active=!!eligible&&(mode==='on'||mode==='auto'&&!conversion);
     const reason=!eligible?'水草队伍或E舞步条件未满足，不计金杯100精通':mode==='on'?'已确认受到草元素攻击，100精通仍在10秒内':mode==='off'?'未触发或100精通已过10秒':conversion?'奈芙尔满辉开E后种子不迸发，默认未触发100精通；开E前自伤或敌方草攻击仍可另行触发':'按丰穰之核自伤触发100精通，持续10秒';
     return {active,conversion,eligible:!!eligible,mode,reason};

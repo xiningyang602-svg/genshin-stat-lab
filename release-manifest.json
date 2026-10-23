@@ -1,10 +1,10 @@
 {
-  "sourceCommit": "a7a8c0734b6aea0d33548dc37b30e9d1ac1b84e7",
+  "sourceCommit": "138040d1dc9f47feab5d37a926cb03e48cd22050",
   "files": [
     {
       "path": "app.js",
-      "bytes": 112842,
-      "sha256": "ce018649ee62dde0144984a8840678ca0cdae74c312ba92d512b85131827465f"
+      "bytes": 112876,
+      "sha256": "8d4e257961e764c0ec22b678e8daaa650e2cc37cedd022c18bab8266cf8a5bba"
     },
     {
       "path": "artifacts.js",
@@ -28,8 +28,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 1491,
-      "sha256": "e138259bb34f4e7173ca6a2d87c2c97285a6f34d2240e72e8a6da253d10fd2f6"
+      "bytes": 1512,
+      "sha256": "4b874715ed6e17386d0d2a4c35b10a64bfb9ce450ae6a017c174ed0bd67331cd"
     },
     {
       "path": "mechanisms.js",
@@ -73,8 +73,8 @@
     },
     {
       "path": "support-presets.js",
-      "bytes": 19255,
-      "sha256": "fa7e8b27437275c98d20edbf19bb5e601ef43b5ecca0b2258ffd2710c927cba8"
+      "bytes": 19282,
+      "sha256": "f5450bfc674da5843eec563ed619ef1a3192cfcaaca6235e0322465f0793a810"
     },
     {
       "path": "team.js",
@@ -83,8 +83,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14874734,
-      "sha256": "761f1b81f2ac8f6d90b4351c41a1961596fd9208283868516284cd7a34680fe6"
+      "bytes": 14874797,
+      "sha256": "ee0ab50e8d4378f039cd1b9d4d24a2f063129b21cf38654fc968efd473d65f0e"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
@@ -93,8 +93,8 @@
     },
     {
       "path": "USER_GUIDE.html",
-      "bytes": 29148,
-      "sha256": "4846225c99b207900a928b5a9e8a5e6adc3041afca1aef8426f60d2b19a60b0d"
+      "bytes": 29291,
+      "sha256": "b703e5074d86eac7ab5557b649c972dbbf37d7c9d99470218608a37ebf6cb83a"
     },
     {
       "path": "vendor/ocr/core/tesseract-core-lstm.wasm.js",
