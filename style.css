@@ -36,4 +36,3 @@ select optgroup {font-weight:700;}
 
 /* Readable form labels and explanatory text, while preserving the responsive grids. */
 .field label{color:#697764;overflow-wrap:anywhere}.field input,.field select,.field textarea{min-height:40px}.help,.panel-intro,.crit-note{color:#778370}.card-head{flex-wrap:wrap}.card-head h3{min-width:0}.section-tag{font-size:10px}
-.field label[for="field-supportPanelMode"],.field label[for="field-supportMode"]{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:3px}
