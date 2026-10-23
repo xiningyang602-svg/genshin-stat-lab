@@ -911,7 +911,8 @@
     if(!panel||panel.mode==='artifacts')for(const b of buffList(config))if((b.isStatic||b.staticSet||c.key==='珊瑚宫心海'&&/暴击率降低100/.test(b.title||''))&&buffAllowed(b,ds,'solo',config,c))for(const [k,v] of Object.entries(b.data||{}))add(attr,k,typeof v==='function'?v(ds):v);
     return panelValues(attr);
   }
-  function artifactMainStats(mains){const stats=Object.fromEntries([...Object.keys(ROLLS),'dmg','phy','heal'].map(k=>[k,0]));stats.hpPlus=4780;stats.atkPlus=311;for(const k of Object.values(mains||{}))if(MAIN[k])stats[k]+=MAIN[k];return stats;}
+  // Seed every main-stat key before accumulation, including all seven elemental goblets.
+  function artifactMainStats(mains){const stats=Object.fromEntries([...Object.keys(ROLLS),...Object.keys(MAIN)].map(k=>[k,0]));stats.hpPlus=4780;stats.atkPlus=311;for(const k of Object.values(mains||{}))if(MAIN[k])stats[k]+=MAIN[k];return stats;}
   global.GEngine={ELEMENT,WEAPON,ROLLS,MAX_ROLLS,MAIN,LABELS,TRANSFORM,SPECIAL,character,getStats,getWeapon,talentFor,calc,Stat,defaultConfig,defaultRotation,outOfCombatPanel,resolveDetail,rollUnits,rollCosts,
     selfBuffs,buffList,weaponBuffs,artifactBuffs,createAttr,add,buffAllowed,isDamageDetail,isTeamBuff,constellationAllows,paramsFor,prepare,optimize,marginal,resistance,levelMultiplier,specialFactor,specialUncrit,indirectExpected,distributeRolls,capacity,panelValues,artifactMainStats,stateFields,STATE_FIELDS,hasFlatBuffs:config=>global.GTeam?.hasFlatBuffs(config)||global.GCharacterFixes?.hasFlat(config)||config.weapon==='裁叶萃光'||config.sets?.some(s=>s.name==='昔时之歌'&&s.count>=4)};
   if(typeof module!=='undefined')module.exports=global.GEngine;
