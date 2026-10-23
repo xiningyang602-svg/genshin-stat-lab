@@ -1,10 +1,10 @@
 {
-  "sourceCommit": "4bab7c4e17b8f9f4d8a76d99bbac709219fa2477",
+  "sourceCommit": "fc2fb6a2ed2d134354d5c173dbb44e2eec0b7338",
   "files": [
     {
       "path": "app.js",
-      "bytes": 115341,
-      "sha256": "e023d7dd081c0dd7d4b9485ff29bc0a7c27ce60a6a8db3a93df32da91d799440"
+      "bytes": 112221,
+      "sha256": "9822fad481c0a2c75e7b80346f9333fbcc6797f2060ce708df6f418c1f158225"
     },
     {
       "path": "artifacts.js",
@@ -28,8 +28,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 1411,
-      "sha256": "c4d28e38f3b0edfc31236b2c4e236989f86173bd1ff6dbcb03ee6fa664388b3f"
+      "bytes": 1446,
+      "sha256": "fa2c93059f15ccc4245a5b09df13862c64c8411857a6c3e3e46ef874c20979d4"
     },
     {
       "path": "mechanisms.js",
@@ -48,8 +48,8 @@
     },
     {
       "path": "recommendations.js",
-      "bytes": 206506,
-      "sha256": "79c2b870ac206a451cfcef6efe7cd6d586dd4b03b03f25e05ff6dc447b3b9188"
+      "bytes": 214361,
+      "sha256": "52f46f7aecb19d4bf02ee5f2f1da95d004573adb2f1283ba437f4f6f15beb9e1"
     },
     {
       "path": "resident-panel.js",
@@ -63,8 +63,8 @@
     },
     {
       "path": "style.css",
-      "bytes": 23769,
-      "sha256": "6a87602818a66e1e20212734fd71490e7e9e575c43aa9032c9fc3634759996b5"
+      "bytes": 24519,
+      "sha256": "0b10f29da6f37601fe87267852222d847745884e49cf9b034bff0ca7acd94e79"
     },
     {
       "path": "support-panels.js",
@@ -83,8 +83,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14874699,
-      "sha256": "6c60dcdb8a22c153d614d27fd4ecd03bdfc71a33dc4c0ababfa8f9e2e58c2350"
+      "bytes": 14873193,
+      "sha256": "f95b22cfef3ee60bea61edc3db241ed46a5a1161f93a23c3f888f94777042508"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
@@ -93,8 +93,8 @@
     },
     {
       "path": "USER_GUIDE.html",
-      "bytes": 30044,
-      "sha256": "101d0f3bbd088e407a15f4b3b47d394ce19d4d58459ee934cdd6a5ba00451a63"
+      "bytes": 28031,
+      "sha256": "b4edd9e4e648b9445ee36c1b9c790f53270685176d652e5de9edc4a8ada5b0c1"
     },
     {
       "path": "vendor/ocr/core/tesseract-core-lstm.wasm.js",

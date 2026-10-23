@@ -7882,7 +7882,7 @@
     const signatures=take((record?.signatures||[]).map(w=>[w.name,label(w.name)+(w.relation==='signature'?' · 专武':' · 定制/配套')]));
     if(signatures.length)options.push(group('专武 / 定制配套',signatures));
     const recommended=take((record?.weapons||[]).filter(n=>byName.has(n)).map(n=>[n,label(n)]));
-    if(recommended.length)options.push(group('攻略常用武器（含不同玩法）',recommended));
+    if(recommended.length)options.push(group('常用推荐武器',recommended));
     const others=take(available.map(w=>[w.name,label(w.name)]));
     if(others.length)options.push(group('其他武器 · 按星级',others));
     if(custom)options.push(['custom','自定义武器']);
@@ -7893,7 +7893,7 @@
     const suffix=support?' · 4件':' · 4件套',names=new Set(available.map(a=>a.name));
     const recommended=(record?.artifacts||[]).filter(n=>names.has(n)&&!used.has(n)&&used.add(n)).map(n=>[n,n+suffix]);
     const options=[['none',support?'无套装增益':'无套装 / 只计算主副词条']];
-    if(recommended.length)options.push(group('攻略常用四件套（含条件项）',recommended));
+    if(recommended.length)options.push(group('常用推荐四件套',recommended));
     const others=available.filter(a=>!used.has(a.name)).map(a=>[a.name,a.name+suffix]);
     if(others.length)options.push(group('其他四件套',others));
     if(!support)options.push(['two','自定义 2 + 2']);
@@ -7905,7 +7905,7 @@
     // Retain an existing invalid selection visibly so changing the primary cannot disguise it as empty.
     if(selected===character)options.push([selected,selected+'（与主角色重复，请重选）']);
     const recommended=(record?.teammates||[]).filter(n=>names.has(n)&&!used.has(n)&&used.add(n)).map(n=>[n,n]);
-    if(recommended.length)options.push(group('攻略常用队友（含不同玩法）',recommended));
+    if(recommended.length)options.push(group('常用推荐队友',recommended));
     const others=available.filter(c=>!used.has(c.key)).map(c=>[c.key,c.key]);
     if(others.length)options.push(group('其他角色',others));
     return options;
