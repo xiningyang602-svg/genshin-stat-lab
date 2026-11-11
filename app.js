@@ -189,7 +189,7 @@
     const current=window.GSupport.preset(copy(ctx));let slots='';
     for(let i=0;i<3;i++) {
       const t=(full?current.teammates:config.teammates)?.[i]||{},c=E.character(t.character);
-      slots+='<div class="contributor"><div class="field"><label>队友 '+(i+1)+'</label><select data-path="teammates.'+i+'.character">'+optionsHTML(Guides.teammateOptions(config.character,{selected:t.character}),t.character||'')+'</select></div>';
+      slots+='<section class="team-slot" aria-labelledby="team-slot-'+i+'"><h4 class="team-slot-heading" id="team-slot-'+i+'">队友 '+(i+1)+'</h4><div class="team-slot-body"><div class="field"><select aria-label="队友 '+(i+1)+'角色" data-path="teammates.'+i+'.character">'+optionsHTML(Guides.teammateOptions(config.character,{selected:t.character}),t.character||'')+'</select></div>';
       if(c) {
         slots+='<div class="fields" style="margin-top:8px">'+field('命座','teammates.'+i+'.cons','number',{numeric:true,options:[0,1,2,3,4,5,6].map(n=>[n,n+'命'])})+field('精炼','teammates.'+i+'.refine','number',{numeric:true,options:[1,2,3,4,5].map(n=>[n,n])})+field('武器（90级）','teammates.'+i+'.weapon','text',{wide:true,options:Guides.weaponOptions(c.key)})+'</div>'+
           '<div style="margin-top:8px">'+talentFields(i)+'</div>'+
@@ -215,8 +215,9 @@
           (!window.GTeam?.supported.has(c.key)?check('已在补充增益中手动补齐该角色效果','teammates.'+i+'.manualVerified'):'')+
           (config.supportPanelMode!=='base'&&(window.GTeam?.convertedInputs[c.key]||[]).length?'<details class="method-details"><summary>面板包含百分比转移时：可再次转化的属性</summary><p>若此面板含砂糖、圣显等百分比转移，填写剔除不能继续转化部分后的数值。一般固定属性、共鸣和宗室等可以参与转换。</p><div class="fields">'+window.GTeam.convertedInputs[c.key].map(k=>field('可再次转化的'+({atk:'攻击力',hp:'生命值',def:'防御力',mastery:'精通'})[k],'teammates.'+i+'.premod.'+k,'number',{placeholder:'无百分比转移可留空'})).join('')+'</div></details>':''));
       }
-      slots+='</div>';
+      slots+='</div></section>';
     }
+    slots='<div class="team-slots">'+slots+'</div>';
     if(current._metric?.reaction?.startsWith('lunar')&&[config.character,...(config.teammates||[]).map(t=>t.character)].filter(n=>window.GTeam.MOON.includes(n)).length>=2){const candidates=window.GTeam.moonCandidates(current);slots+='<div class="divider"></div>'+(candidates.length?field('满辉额外月伤来源','conditions.lastNonMoonCaster','text',{wide:true,value:config.conditions.lastNonMoonCaster||'auto',options:[['auto','默认最高可用者（须由其最后施放E/Q）'],...candidates.map(t=>[t.id,t.character+'最后施放E/Q']),['none','当前未触发 / 已过20秒']],help:'不同来源不叠加，实际由最后一名非月兆施法者覆盖；按其当前合格属性计算，最多36%。计算清单会注明采用者。'}):'<p class="help">本队全为月兆角色：没有非月兆E/Q来源，满辉额外公共月伤为0；角色自身的满辉天赋仍分别计入。</p>');}
     return card('队友与自动共鸣',''+field('辅助面板输入口径','supportPanelMode','text',{wide:true,options:[['base','单人常驻面板（自动联动）'],['combat','实战面板（已含临时增益）']]})+(config.supportPanelMode==='combat'?'<p class="warnings">此配置保留旧实战面板口径，不会再自动叠加辅助属性。要使用新联动，请切换常驻口径并核对原输入。</p>':'')+field('队友增益状态','supportMode','text',{wide:true,options:[['full','可用增益默认满效果'],['manual','自定义触发状态']]})+slots+(full?'':'<div class="divider"></div>'+check('当前角色有护盾','conditions.shielded')+check('附近存在月笼','conditions.moonCage')+check('双岩减抗已施加','conditions.geoShredActive')+check('目标冰附着或冻结','conditions.cryoAura')+check('双草第一层已触发','conditions.dendroFirst')+check('双草第二层已触发','conditions.dendroSecond')+check('主角色正在场上','conditions.onField')+check('目标处于激化状态','conditions.quicken')+check('星扩散旋涡已成立','conditions.vortexActive')),{detail:true,open:true});
   }
@@ -393,12 +394,18 @@
     const csv=root.querySelector('[data-action="csv"]');if(csv)csv.disabled=true;
     for(const b of root.querySelectorAll('[data-action="calculate"]')){b.disabled=ocr.busy;b.textContent=ocr.busy?'正在识别截图…':ocr.confirmed?'采用截图并计算 →':'先核对截图识别结果 →';}
   }
+  function appearancePicker() {
+    const appearance=window.GAppearance;
+    if(!appearance)return '';
+    return '<div class="appearance-switch" role="group" aria-label="网站配色">'+appearance.styles.map(({id,label,name})=>
+      '<button type="button" data-appearance="'+id+'" title="'+name+'" aria-label="'+name+'" aria-pressed="'+(appearance.current===id)+'">'+label+'</button>').join('')+'</div>';
+  }
   function render() {
     ocrDragDepth=0;
     for(const d of root.querySelectorAll('details[data-card-title]'))openedCards.set(d.dataset.cardTitle,d.open);
     config.setChoice=config.setChoice||'none';
     if(!M.selected(config).some(m=>m.id===goal))goal=M.selected(config)[0]?.id||'';
-    root.innerHTML='<header class="topbar"><div class="topbar-inner"><div class="brand"><div class="brand-icon">✧</div><div><h1>提瓦特词条实验室</h1><p>TEYVAT · ARTIFACT STAT LAB</p></div></div><div class="top-actions"><span class="badge">原神 '+D.version+' · 月 / 星反应</span><button class="soft-btn" data-action="import">导入配置</button><button class="soft-btn" data-action="export">保存配置 ↓</button></div></div></header><main class="workspace"><nav class="main-nav">'+[['optimize','最优分配'],['marginal','词条收益'],['formulas','公式与数据']].map(([k,l],i)=>'<button class="nav-btn '+(tab===k?'active':'')+'" data-tab="'+k+'"><span class="nav-num">0'+(i+1)+'</span>'+l+'</button>').join('')+'</nav>'+
+    root.innerHTML='<header class="topbar"><div class="topbar-inner"><div class="brand"><div class="brand-icon">✧</div><div><h1>提瓦特词条实验室</h1><p>TEYVAT · ARTIFACT STAT LAB</p></div></div>'+appearancePicker()+'<div class="top-actions"><span class="badge">原神 '+D.version+' · 月 / 星反应</span><button class="soft-btn" data-action="import">导入配置</button><button class="soft-btn" data-action="export">保存配置 ↓</button></div></div></header><main class="workspace"><nav class="main-nav">'+[['optimize','最优分配'],['marginal','词条收益'],['formulas','公式与数据']].map(([k,l],i)=>'<button class="nav-btn '+(tab===k?'active':'')+'" data-tab="'+k+'"><span class="nav-num">0'+(i+1)+'</span>'+l+'</button>').join('')+'</nav>'+
       (tab==='formulas'?formulasPage():'<div class="layout"><aside class="sidebar">'+characterCard()+(tab==='marginal'?panelCard():'')+artifactsCard()+(tab==='optimize'?budgetCard():'')+metricsCard()+metricSettingsCard()+teammatesCard()+manualBuffCard()+buffsCard()+contributorsCard()+'</aside><section class="results '+(dirty?'stale':'')+'"><div class="results-top"><div><h3>'+(tab==='optimize'?'各伤害指标 · 分别求最优':'一个词条，会带来多少提升')+'</h3><p>固定主词条与实际配置，比较单人和组队。</p></div>'+goalSwitch()+'</div><div class="calculate-line" style="margin-bottom:15px"><span class="status-msg">'+(busy?'正在计算…':dirty?'配置已变化，请重新计算':'可展开计算依据核对每个乘区')+'</span><div style="margin-left:auto;display:flex;gap:7px"><button class="soft-btn" data-action="csv" '+(!results[tab]?.[goal]||dirty||busy?'disabled':'')+'>导出结果</button><button class="primary" data-action="calculate"'+(busy?' disabled':'')+'>'+(busy?'计算中…':tab==='marginal'?'比较所选指标收益':'分别优化所选指标')+'<span class="arrow">→</span></button></div></div>'+(busy?'<div class="progress"><div style="width:'+progress+'%"></div></div>':'')+(error?'<div class="error" role="alert">'+esc(error)+'</div>':'')+metricOverview(tab)+(activeMetric()?'<div class="metric-assumptions"><strong>'+esc(activeMetric().title)+'</strong><ul>'+M.describe(config,activeMetric()).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul></div>':'')+resultContent(tab)+'</section></div>')+
       '<footer class="footer"><span>五星圣遗物 · 花与羽毛固定 · 输入的技能条件与增益决定结果</span><span><a href="USER_GUIDE.html" target="_blank">使用说明与覆盖范围</a> · '+(window.location.protocol==='file:'?'':'<a href="teyvat-offline.zip" download>下载离线版</a> · ')+'<a href="THIRD_PARTY_NOTICES.txt" target="_blank">许可信息</a> · 本地保存</span></footer></main>'+(tab==='formulas'?'':'<div class="mobile-actions"><button class="soft-btn" data-action="view-results">查看结果 ↑</button><button class="primary" data-action="calculate"'+(busy?' disabled':'')+'>'+(busy?'计算中…':'计算所选指标 →')+'</button></div>')+'<button type="button" class="back-to-top'+(tab==='formulas'?'':' above-mobile-actions')+'" data-action="back-to-top" aria-label="返回顶部" title="返回顶部"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 14l6-6 6 6M6 4h12"/></svg><span>顶部</span></button>'+'<input class="hidden" type="file" id="config-file" accept=".json">';
     pendingOcrUi();
@@ -538,6 +545,12 @@
   });
   root.addEventListener('click',event=>{
     const button=event.target.closest('button');if(!button)return;
+    if(button.dataset.appearance){
+      if(window.GAppearance?.select(button.dataset.appearance)){
+        for(const choice of button.parentElement.querySelectorAll('button[data-appearance]'))choice.setAttribute('aria-pressed',String(choice===button));
+      }
+      return;
+    }
     if(button.dataset.character){selectCharacter(button.dataset.character);return;}
     if(button.dataset.tab){tab=button.dataset.tab;error='';render();return;}
     if(button.dataset.goal){goal=button.dataset.goal;render();return;}

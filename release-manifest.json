@@ -1,10 +1,20 @@
 {
-  "sourceCommit": "da304cbc33dddd3b034f59a4ac731f48a4fa2466",
+  "sourceCommit": "bdc57ddca88ee8b0ddcf3bbedf6bf8b6d6317c71",
   "files": [
     {
       "path": "app.js",
-      "bytes": 108336,
-      "sha256": "259da03644b03053e444d21bc3ac18deaa732b6e53aa90e64c869fb1546a4907"
+      "bytes": 109268,
+      "sha256": "6b5d14c9eeb27a535bd2a0da40e41cec81b6301831166dc7fceb97decdb15469"
+    },
+    {
+      "path": "appearance.css",
+      "bytes": 5817,
+      "sha256": "598ac14c79688ee7363a0b9b533a381a4eb763535e8e81a3ca6407d8940817be"
+    },
+    {
+      "path": "appearance.js",
+      "bytes": 1084,
+      "sha256": "58d1210f5dd0c52bc8ae6a2bcac2b3399b7f94737388f3699a34c71399a58b62"
     },
     {
       "path": "artifacts.js",
@@ -28,8 +38,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 1587,
-      "sha256": "0e1116ee20643dbb70a78d04b40e4a2b1933955b06a803dd50eb0714811724bc"
+      "bytes": 1729,
+      "sha256": "046724c13b8a9cf65fdb91e36653e9d877c208b53d0a14192bb956177020f13a"
     },
     {
       "path": "mechanisms.js",
@@ -63,8 +73,8 @@
     },
     {
       "path": "style.css",
-      "bytes": 24515,
-      "sha256": "6a7ddc47c010b447d9fdec1e0c8c91546782436c344f9c75adff5af40ac84884"
+      "bytes": 24486,
+      "sha256": "a692c8b213530ef820a8ce5967a823de98bb6caf21945f2ae49cddb230e8eb09"
     },
     {
       "path": "support-panels.js",
@@ -83,8 +93,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14883414,
-      "sha256": "bbf77bb61a0a6ab0d0793b08981fa00aed58ee59f2ad0d7bf7e9fecfa8470701"
+      "bytes": 14885393,
+      "sha256": "3bf8808556d85c8c16d69fb3588c1a190a6463a2723e21ceb604414c937975a5"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
@@ -93,8 +103,8 @@
     },
     {
       "path": "USER_GUIDE.html",
-      "bytes": 30548,
-      "sha256": "0b5c0f02363ab582ca395e85905a2057985249e96a309d3d9d066f659b6a7d6f"
+      "bytes": 30760,
+      "sha256": "ac899b37bd0ad8130c8c51e2f63255bebc860fbc79fb8feafbfe39de814177d6"
     },
     {
       "path": "v72.js",
