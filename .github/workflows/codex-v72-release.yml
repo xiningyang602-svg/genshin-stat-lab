@@ -1,0 +1,28 @@
+name: Verify Teyvat 7.2 static release
+on:
+  push:
+    branches: [codex-v72-stage-20261111]
+    paths: ['.codex-release-v72/manifest.json']
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Verify and build clean release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(git rev-parse HEAD^)
+          test "$base" = 5af58217f76d6f71799c0cd77433c016c5727865
+          python .codex-release-v72/rebuild.py
+          git rm --cached -r -- .codex-release-v72 .github/workflows/codex-v72-release.yml
+          git add -- .nojekyll README.md release-manifest.json *.js *.html *.css *.txt teyvat-offline.zip vendor/ocr
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          tree=$(git write-tree)
+          commit=$(git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit-tree "$tree" -p "$base" -m 'Publish Genshin 7.2 characters and Starsealed Edict')
+          git push origin "$commit:refs/heads/codex-v72-20261111"
+          printf 'Verified release commit: %s\n' "$commit"
