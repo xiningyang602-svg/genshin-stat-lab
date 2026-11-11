@@ -103,3 +103,10 @@ https://github.com/tesseract-ocr/tessdata_best
 Apache License 2.0. Full model license: vendor/ocr/LICENSE-model.
 Pinned source URLs, sizes and SHA256 checksums: vendor/ocr/manifest.json.
 Images are processed locally in the browser, and are not sent to an OCR API.
+
+7.2 release additions (Mitya, Valeriy, and Starsealed Edict):
+Official roster and release: https://ys.mihoyo.com/main/m/news/detail/167205
+Game stat curves and released localization: genshin-db, 8e5badd60b5d894284ccc927a56c9683529d2592
+Full precision skill data and formula cross-check: Genshin Optimizer, f52264cbbf7248ab4e055adc1e96af879ea93036
+Chinese data names and display cross-check: miao-plugin, 9d8972c2b060ede67d1b0dc7565abb4fe39b3aa7
+Existing MIT license texts above apply to the respective data sources.

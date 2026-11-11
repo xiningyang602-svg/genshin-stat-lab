@@ -7868,6 +7868,67 @@
           "url": "https://keqingmains.com/misc/snezhnaya/"
         }
       ]
+    },
+    "米提亚": {
+      "source": "https://www.miyoushe.com/zzz/article/79447599",
+      "version": "7.2",
+      "weapons": [
+        "天光的纺琴",
+        "千夜浮梦",
+        "流浪乐章",
+        "祭礼残章"
+      ],
+      "artifacts": [
+        "影中沉凝的幻灭",
+        "饰金之梦",
+        "如雷的盛怒",
+        "炉火融炼之心"
+      ],
+      "signatures": [
+        {
+          "name": "秘星典谕",
+          "relation": "signature",
+          "source": "https://ys.mihoyo.com/main/m/news/detail/167205"
+        }
+      ],
+      "teammates": [
+        "瓦列里",
+        "奥黛塔",
+        "八重神子",
+        "砂糖",
+        "迪奥娜",
+        "七七",
+        "希诺宁",
+        "旅行者·冰",
+        "桑多涅"
+      ],
+      "notes": "前台重点比较精通和双暴；后台队友版可根据队内炉火四件分工更换套装。"
+    },
+    "瓦列里": {
+      "source": "https://www.miyoushe.com/ys/article/79325260",
+      "version": "7.2",
+      "weapons": [
+        "西风剑",
+        "苍古自由之誓",
+        "祭礼剑",
+        "西福斯的月光"
+      ],
+      "artifacts": [
+        "炉火融炼之心",
+        "昔日宗室之仪",
+        "教官"
+      ],
+      "signatures": [],
+      "teammates": [
+        "米提亚",
+        "奥黛塔",
+        "八重神子",
+        "赛诺",
+        "迪奥娜",
+        "砂糖",
+        "希诺宁"
+      ],
+      "notes": "辅助优先保证攻击与循环；攻斥指令在辉映·星超导下仅提升雷元素星超导。"
     }
   }
 };

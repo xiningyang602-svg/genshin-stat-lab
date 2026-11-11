@@ -17,8 +17,10 @@
   }
   function preset(c){
     if(c.supportMode!=='full'||c._scope==='solo'||!(c.teammates||[]).some(t=>t.character))return c;
-    const T=g.GTeam,s=scene(c),people=[c.character,...(c.teammates||[]).map(t=>t.character)].map(E.character).filter(Boolean),elements=new Set(people.map(x=>x.element)),cond=c.conditions||(c.conditions={});
-    const shielders=['钟离','迪奥娜','莱依拉','绮良良','蓝砚','托马','辛焱','诺艾尔','茜特菈莉','塔利雅','希格雯','尼可'];
+    const T=g.GTeam,people=[c.character,...(c.teammates||[]).map(t=>t.character)].map(E.character).filter(Boolean),elements=new Set(people.map(x=>x.element)),cond=c.conditions||(c.conditions={});
+    if(!c._metric?.reaction&&cond.stellarField===undefined&&elements.has('cryo')&&people.some(x=>x.key==='米提亚')){cond.stellarField=true;cond.stellarHits=num(c.metricSettings?.stellarHits,10);}
+    const s=scene(c);
+    const shielders=['钟离','迪奥娜','莱依拉','绮良良','蓝砚','托马','辛焱','诺艾尔','茜特菈莉','塔利雅','希格雯','尼可','瓦列里'];
     cond.onField=cond.onField!==false;cond.enemyCount=Math.max(1,num(c.enemy?.count,1));
     if(T?.HEX.includes(c.character))cond.homework=true;
     cond.radianceConduct=s.sc;cond.radianceSwirl=s.ss;
@@ -43,6 +45,8 @@
       if(t.character==='申鹤')x.mode=/普攻|普通攻击|重击|下落|N1/.test(s.title)?'hold':'tap';
       if(t.character==='哥伦比娅'){const reaction=s.rx||c._metric?.partyReaction;x.mode=reaction==='lunarCrystallize'?'lunarCrystallize':reaction==='lunarBloom'?'lunarBloom':'lunarCharged';x.c6Reaction='all';}
       if(t.character==='奥黛塔'){x.mode=s.ss?'stellarSwirl':s.sc?'stellarConduct':'off';x.blessingFull=true;}
+      if(t.character==='米提亚'){x.mode='steady';x.stacks=g.GV72.beacons(num(t.cons));}
+      if(t.character==='瓦列里'){x.mode=s.sc?'stellarConduct':'electro';x.stacks=g.GV72.momentumCap(num(t.cons));x.valeriyC6Marked=num(t.cons)>=6;}
       return x;
     });
     return c;
@@ -50,6 +54,12 @@
   function inputs(t,c,base=[]){
     const keys=new Set([...base,...(extraInputs[t.character]||[])]),s=scene(c||{}),cons=num(t.cons),normal=!s.star&&!s.moon,ele=s.element;
     if(t.character==='奥黛塔')keys.delete('atk');
+    if(t.character==='米提亚'&&!s.sc)keys.delete('mastery');
+    if(t.character==='米提亚'&&c._metric&&!s.rx&&!s.indirect)keys.delete('mastery');
+    if(t.character==='瓦列里'){
+      const star=t.mode==='stellarConduct'||!t.mode&&s.sc;
+      if(c.conditions?.onField===false||ele!=='electro'||star&&s.rx!=='stellarConduct'&&!s.indirect||!star&&!normal||c.supportMode==='manual'&&!t.characterActive)keys.delete('atk');
+    }
     if(t.character==='七七'&&(cons<6||!s.star))keys.delete('atk');
     if(t.character==='希诺宁'&&cons<4)keys.delete('def');
     if(t.character==='茜特菈莉'&&(cons<1||!normal))keys.delete('mastery');
@@ -86,7 +96,8 @@
     const extra={a:people.some(x=>x.key==='达达利亚')?1:0,e:training?1:0};
     if(index===null&&scope==='solo'&&c.key==='丝柯克'&&config.metricSettings?.talentMode!=='actual')extra.e=1;
     if(c.key==='洛恩'){const state=index===null?{...(g.GMetrics?.defaultStates(config)||config.conditions||{}),...(g.GMetrics?.settings(config)?.states||config.metricSettings?.states||{})}:{lohenHighSpirits:config.supportMode==='full'||t.lohenHighSpirits};if(state.lohenHighSpirits)extra.e+=1;}
-    const tc={...t,extraTalent:extra},levels=E.talentFor(c,tc).talentLevel,base=Object.fromEntries(['a','e','q'].map(k=>[k,num(t.talents?.[k],index!==null&&k==='a'?1:10)]));
+    const base=Object.fromEntries(['a','e','q'].map(k=>[k,num(t.talents?.[k],index!==null&&k==='a'&&c.key!=='瓦列里'?1:10)]));
+    const tc={...t,talents:base,extraTalent:extra},levels=E.talentFor(c,tc).talentLevel;
     return {base,levels,uplift:Object.fromEntries(['a','e','q'].map(k=>[k,levels[k]-base[k]]))};
   }
   function effects(ctx){

@@ -5,7 +5,18 @@
   const clone=o=>JSON.parse(JSON.stringify(o)),labels={atk:'攻击力',hp:'生命值',def:'防御力',mastery:'元素精通',cpct:'暴击率',recharge:'充能效率'};
   const sharedWeapons=new Set(['苍古自由之誓','终末嗟叹之诗','松籁响起之时','狼的末路','讨龙英杰谭']),snapshotPolicies=new Set(['nicoleE','kazuhaA4','sucroseA4','rosariaQ','keySnapshot','peakSnapshot']);
   const autoWeapons=new Set(['西福斯的月光','流浪的晚星','玛海菈的水色']);
-  function primarySource(c){let panel=c._supportRuntimePanel;if(!panel){try{panel=E.outOfCombatPanel(c);}catch(e){if(c.weapon)throw e;panel={};}}return {character:c.character,level:c.level,cons:c.cons,weapon:c.weapon,refine:c.refine,talents:c.talents,panel,constructed:true,set:(c.sets||[]).find(s=>s.count>=4)?.name||'none',castE:true,castQ:true,characterActive:true,weaponActive:true,setActive:true,homework:c.conditions?.homework,uptime:100,stacks:3};}
+  function primarySource(c){
+    let panel=c._supportRuntimePanel;if(!panel){try{panel=E.outOfCombatPanel(c);}catch(e){if(c.weapon)throw e;panel={};}}
+    const source={character:c.character,level:c.level,cons:c.cons,weapon:c.weapon,refine:c.refine,talents:c.talents,panel,constructed:true,set:(c.sets||[]).find(s=>s.count>=4)?.name||'none',castE:true,castQ:true,characterActive:true,weaponActive:true,setActive:true,homework:c.conditions?.homework,uptime:100,stacks:3};
+    if(c.character==='米提亚'){
+      const s=g.GMetrics?.settings(c),states=s?.states||{};
+      source.mode=c._metric?.mityaCore||'overload';source.stacks=states.mityaBeaconsHeld??g.GV72.beacons(c.cons);
+      source.castE=source.characterActive=states.mityaCoreActive!==false;
+      if(s?.weaponMode==='manual')source.ownStates={starsealedSkillActive:states.starsealedSkillActive??false,starsealedStacks:states.starsealedStacks??0};
+    }
+    if(c.character==='瓦列里')source.castE=g.GMetrics?.settings(c).states.valeriySkillActive!==false;
+    return source;
+  }
   function isStat(key){return /^(atk|hp|def)(Pct|Plus|Borrowed)?$/.test(key)||/^(mastery|cpct|recharge)(Plus|Borrowed)?$/.test(key);}
   function statKey(key){return key.startsWith('mastery')?'mastery':key.startsWith('recharge')?'recharge':key.startsWith('cpct')?'cpct':key.slice(0,3)==='atk'?'atk':key.startsWith('hp')?'hp':'def';}
   function policy(e){
@@ -133,17 +144,17 @@
       for(const t of people){const p=views[t.character],r=num(t.refine,1)-1;if(t.weapon==='薙草之稻光'){const bonus=t.weaponActive===false?0:[30,35,40,45,50][r];p.eligible.recharge=num(p.eligible.recharge,100)+bonus;p.sources.push({owner:t.character,source:'薙草Q充能',stat:'recharge',points:bonus,policy:'direct'});const v=Math.min([80,90,100,110,120][r],Math.max(0,p.eligible.recharge-100)*[.28,.35,.42,.49,.56][r])/100*p.white.atk;p.eligible.atk=num(p.eligible.atk)+v;p.sources.push({owner:t.character,source:'薙草当前充能转攻击',stat:'atk',points:v,policy:'direct'});}p.total={...p.eligible};}
       const before=clone(views);for(const t of people){const p=views[t.character];p.eligible=apply(collect(t.character,before,active).filter(e=>policy(e)==='columbinaC2'),p.eligible,p.white,p.sources);p.total={...p.eligible};}return views;
     }
-    const current=eligiblePhase(c.character),castViews={},refreshViews={};
+    const activeNow=c._metric?.offField?'':c.character,current=eligiblePhase(activeNow),castViews={},refreshViews={};
     for(const t of people){
       if(['尼可','枫原万叶','砂糖','罗莎莉亚'].includes(t.character)||['圣显之钥','岩峰巡歌'].includes(t.weapon))castViews[t.character]=eligiblePhase(t.character)[t.character];
-      if(autoWeapons.has(t.weapon))refreshViews[t.character]=eligiblePhase(t.weaponRefreshPhase==='onField'?t.character:c.character)[t.character];
+      if(autoWeapons.has(t.weapon))refreshViews[t.character]=eligiblePhase(t.weaponRefreshPhase==='onField'?t.character:activeNow)[t.character];
     }
     for(const t of people){const p=current[t.character];p.castEligible=castViews[t.character]?.eligible;p.castSources=castViews[t.character]?.sources;p.refreshEligible=refreshViews[t.character]?.eligible;p.refreshSources=refreshViews[t.character]?.sources;
       if(['圣显之钥','岩峰巡歌'].includes(t.weapon))p.timing+='；'+t.weapon+'已在持有者前台、上述队伍增益有效时满层触发并保存取样值，不随后续属性实时改变';
       if(autoWeapons.has(t.weapon))p.timing+='；'+t.weapon+'采用最近一次10秒刷新值，刷新时持有者在'+(t.weaponRefreshPhase==='onField'?'前台':'后台')+'，该轮固定增益保留12秒';
       panels[t.character]=p;
     }
-    const eligible=clone(panels);for(const t of people){const p=panels[t.character];p.total=apply(collect(t.character,eligible,c.character,castViews,refreshViews).filter(e=>!['direct','columbinaC2'].includes(policy(e))),p.eligible,p.white,p.sources);}
+    const eligible=clone(panels);for(const t of people){const p=panels[t.character];p.total=apply(collect(t.character,eligible,activeNow,castViews,refreshViews).filter(e=>!['direct','columbinaC2'].includes(policy(e))),p.eligible,p.white,p.sources);}
     for(const t of people){const p=panels[t.character],r=num(t.refine,1)-1,em=num(p.eligible.mastery),hp=num(p.eligible.hp),extra=[],add=(stat,value,source)=>{if(value)extra.push({id:t.character+':self-derived:'+source,owner:t.character,stat,points:value,source,policy:'borrowed'});};
       if(t.weapon==='护摩之杖')add('atk',hp*([.008,.01,.012,.014,.016][r]+(num(t.currentHpPct,100)<50?[.01,.012,.014,.016,.018][r]:0)),'护摩当前生命转攻击');
       if(t.weapon==='磐岩结绿')add('atk',hp*[.012,.015,.018,.021,.024][r],'绿剑当前生命转攻击');

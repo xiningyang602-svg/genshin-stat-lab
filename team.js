@@ -37,6 +37,8 @@
     '沃雅妮莎':'HP决定领唱。普通水冰/星扩散模式二选一；Q的86.4%仅自己，不能传给主C。',
     '奥黛塔':'层数填已转移到主C的华彩数量，不能默认刚开E就满层。C4才分享一半Q反应增伤。',
     '薇斯纳':'只有星扩散基础提升共享，人数、整肃等攻击/精通收益只作用她自己。',
+    '米提亚':'稳态按持有的递变信标给全队精通；2命过载的234精通及1命40%暴伤只给前台。星超导基础提升读取米提亚自身结算精通。',
+    '瓦列里':'攻斥指令按普通攻击实际天赋、可转化攻击与重击消耗的冲击势能计算；普通雷伤与雷元素星超导二选一，仅给前台，最多15次。',
     '罗莎莉亚':'填写施放Q时暴击率；全队获得其15%，上限15%。',
     '夜兰':'层数填玲珑骰当前已持续秒数0–14；前台伤害加成为1%+3.5%/秒，上限50%。',
     '坎蒂丝':'Q给元素普通攻击增伤，HP天赋加成为每1000HP增加0.5%。',
@@ -49,8 +51,9 @@
   for(const name of Object.keys(partialCoverage))supported.delete(name);
   const baseInputs={阿贝多:['def'],枫原万叶:['mastery'],纳西妲:['mastery'],砂糖:['mastery'],申鹤:['atk'],希诺宁:['def'],茜特菈莉:['mastery'],伊安珊:['atk'],菈乌玛:['mastery'],伊涅芙:['atk'],菲林斯:['atk'],奈芙尔:['mastery'],兹白:['def'],哥伦比娅:['hp'],莉奈娅:['def'],叶洛亚:['mastery'],尼可:['atk'],沃雅妮莎:['hp'],奥黛塔:['atk'],薇斯纳:['atk'],桑多涅:['atk'],'旅行者·冰':['atk'],罗莎莉亚:['cpct'],坎蒂丝:['hp'],夏沃蕾:['hp'],云堇:['def']};
   const convertedInputs={云堇:['def'],布伦妮:['atk'],枫原万叶:['mastery'],纳西妲:['mastery'],砂糖:['mastery'],伊安珊:['atk'],伊涅芙:['atk'],莉奈娅:['def'],尼可:['atk'],哥伦比娅:['hp']};
-  const resourceNames={申鹤:['冰翎剩余次数',5],云堇:['飞云旗阵剩余次数',30],希诺宁:['C4剩余次数',6],茜特菈莉:['C1星刃剩余次数',10],菈乌玛:['苍色祷歌剩余层数',18],莉奈娅:['历览编录剩余层数',6],叶洛亚:['夜莺剩余层数',21],尼可:['C4剩余次数',8],沃雅妮莎:['领唱/重唱剩余层数',25]};
-  const stackNames={芙宁娜:'实际气氛值',伊安珊:'当前夜魂值（0–54）',茜特菈莉:'C6秘律层数（0–40）',奥黛塔:'已转移到主C的华彩层数',夜兰:'玲珑骰已持续秒数（0–14）',夏沃蕾:'C6治疗层数（0–3）',漩流颂歌:'治疗层数（0–3）'};
+  baseInputs['米提亚']=['mastery'];baseInputs['瓦列里']=['atk'];convertedInputs['瓦列里']=['atk'];
+  const resourceNames={申鹤:['冰翎剩余次数',5],云堇:['飞云旗阵剩余次数',30],希诺宁:['C4剩余次数',6],茜特菈莉:['C1星刃剩余次数',10],菈乌玛:['苍色祷歌剩余层数',18],莉奈娅:['历览编录剩余层数',6],叶洛亚:['夜莺剩余层数',21],尼可:['C4剩余次数',8],沃雅妮莎:['领唱/重唱剩余层数',25],瓦列里:['攻斥指令剩余次数',global.GV72.V.directiveHits]};
+  const stackNames={芙宁娜:'实际气氛值',伊安珊:'当前夜魂值（0–54）',茜特菈莉:'C6秘律层数（0–40）',奥黛塔:'已转移到主C的华彩层数',夜兰:'玲珑骰已持续秒数（0–14）',夏沃蕾:'C6治疗层数（0–3）',漩流颂歌:'治疗层数（0–3）',米提亚:'稳态持有的递变信标',瓦列里:'重击消耗的冲击势能'};
   function rawSupportInputs(t,config) {
     const keys=new Set(baseInputs[t.character]||[]);
     if(['圣显之钥','漩流颂歌'].includes(t.weapon))keys.add('hp');
@@ -118,7 +121,7 @@
     for(const {c,t} of members.slice(config._supportPanelPass?0:1)) {
       if(!t.weapon){errors.push(c.key+' 需要选择武器。');continue;}
       let w;try{w=E.getWeapon({weapon:t.weapon,refine:t.refine||1},c);}catch(e){errors.push(c.key+'：'+e.message);continue;}
-      const tc={character:c.key,level:90,cons:num(t.cons),talents:t.talents||{a:1,e:10,q:10},extraTalent:{e:(skirkTraining?1:0)+(c.key==='洛恩'&&(config.supportMode==='full'||t.lohenHighSpirits)?1:0)}},talent=E.talentFor(c,tc),cons=tc.cons,name=c.key;
+      const tc={character:c.key,level:90,cons:num(t.cons),talents:{a:c.key==='瓦列里'?10:1,e:10,q:10,...t.talents},extraTalent:{a:members.some(({c})=>c.key==='达达利亚')?1:0,e:(skirkTraining?1:0)+(c.key==='洛恩'&&(config.supportMode==='full'||t.lohenHighSpirits)?1:0)}},talent=E.talentFor(c,tc),cons=tc.cons,name=c.key;
       owner=name;category='角色';snapshots.push({owner:name,cons,weapon:w.name,refine:w.refine,set:t.set||'none',talents:talent.talentLevel,inputs:Object.fromEntries(supportInputs(t,config).map(k=>[k,t.panel?.[k]])),panelDetails:graph?.panels[name],stacks:t.stacks,mode:t.mode,auto:config.supportMode==='full'});
       const T=(type,key)=>{const value=talent[type]?.[key];if(typeof value!=='number'){errors.push(name+' 缺少天赋表 '+type+'.'+key);return 0;}return value;};
       const baseAtk=E.getStats(c,90).atkBase+w.base;
@@ -162,6 +165,35 @@
         case '沃雅妮莎':if(castE){const hp=need(t,'hp'),vortex=cond.vortexActive===true;add('res_hydro',T('e','水元素/冰元素抗性降低'),name+'E');add('res_cryo',T('e','水元素/冰元素抗性降低'));if(vortex)add('res_anemo',35,name+'风旋');if(vortex)addFlat(t,'reaction',Math.min(6500,Math.max(0,hp-40000)*.26),stacks(t,onField?25:10),{reactions:['stellarSwirl','stellarVortex']});else addFlat(t,'all',Math.min(3500,Math.max(0,hp-40000)*.14),stacks(t,onField?25:10),{elements:['hydro','cryo']});if(cons>=1&&active)add('atkPlus',hp*.008,name+'C1治疗');if(cons>=2&&(onField||cons>=6)){if(vortex){add('stellarSwirlCdmg',60,name+'C2');add('stellarVortexCdmg',60);}else{add('cdmg_hydro',50,name+'C2');add('cdmg_cryo',50);}}if(cons>=6){add('stellarSwirlElevated',25,name+'C6');add('stellarVortexElevated',25);elementBonus('hydro',60,name+'C6');elementBonus('cryo',60);}}break;
         case '奥黛塔':{const blessing=config.supportMode==='full'?14:Math.min(14,.007*need(t,'atk'));for(const rx of ['stellarConduct','stellarSwirl','stellarVortex'])add(rx+'Base',blessing,name+(config.supportMode==='full'?'祝赐默认满14%（≥2000攻击）':'星辉祝赐'));const n=stacks(t);if(n<0||n>(cons>=1?6:4))errors.push('奥黛塔华彩层数超过命座上限。');stellarBonus(n*15,name+'已转移华彩 '+n);if(cons>=2){add('atkPct',n*7,name+'C2华彩');if(castE&&active&&t.mode!=='off')for(const ele of t.mode==='stellarSwirl'?['cryo','anemo']:['cryo','electro'])add('res_'+ele,20,name+'C2辉映');}if(cons>=4&&castQ)stellarBonus(T('q','雪鹄之梦星烁反应伤害提升')*.5,name+'C4');if(cons>=6&&n>0)for(const rx of ['stellarConduct','stellarSwirl','stellarVortex'])add(rx+'Elevated',25,name+'C6');break;}
         case '薇斯纳':for(const rx of ['stellarSwirl','stellarVortex'])add(rx+'Base',Math.min(14,.007*need(t,'atk')),name+'星扩散祝赐');break;
+        case '米提亚':{
+          const {M,beacons,mityaBlessing}=global.GV72,steady=t.mode!=='overload',field=cond.stellarField===true||cond.radianceConduct===true;
+          if(field&&(config._metric?.reaction==='stellarConduct'||!config._metric))add('stellarConductBase',mityaBlessing(need(t,'mastery')),name+'星耀祝礼');
+          if(castE&&active){
+            const n=stacks(t);if(steady&&(!Number.isInteger(n)||n<0||n>beacons(cons)))errors.push('米提亚持有的递变信标超过当前命座范围。');
+            if(steady)add('mastery',n*M.steadyMastery,name+'稳态炉心 · '+n+'枚信标');
+            if(cons>=1&&onField)add('cdmg',M.c1Cdmg,name+'C1前台暴伤');
+            if(cons>=2){
+              if(steady||onField)add('mastery',steady?M.c2Steady:M.c2Overload,name+(steady?'C2稳态全队精通':'C2过载前台精通'));
+              if(field)for(const ele of ['cryo','electro'])add('res_'+ele,M.c2Res,name+'C2极星辉域');
+            }
+          }
+          if(cons>=6&&field)add('stellarConductElevated',M.c6Elevated,name+'C6全队星超导擢升');
+          break;
+        }
+        case '瓦列里':{
+          const {V,momentumCap,directive}=global.GV72,rx=config._metric?.reaction,star=t.mode==='stellarConduct'||!t.mode&&cond.stellarField;
+          if(cons>=2&&castE)add('mastery',V.c2Mastery,name+'C2战技');
+          if(cons>=6&&!inactive&&(config.supportMode==='full'||t.valeriyC6Marked)){
+            add('cpct_electro',V.c6Cpct,name+'C6标记');add('stellarConductCdmg_electro',V.c6StarCdmg,name+'C6标记');
+          }
+          if(active&&onField&&primary.element==='electro'&&(star?rx==='stellarConduct'||!config._metric:!rx)){
+            const n=stacks(t,V.minMomentum),quota=t.resources===undefined||t.resources===''?V.directiveHits:num(t.resources,-1);
+            if(!Number.isInteger(n)||n<V.minMomentum||n>momentumCap(cons))errors.push('瓦列里需消耗 '+V.minMomentum+'–'+momentumCap(cons)+' 点冲击势能获得攻斥指令。');
+            else if(!Number.isInteger(quota)||quota<0||quota>V.directiveHits)errors.push('瓦列里攻斥指令的剩余次数须为0–'+V.directiveHits+'的整数。');
+            else if(quota>0){const value=directive(eligible(t,'atk'),talent,n,star);addFlat(t,star?'reaction':'all',value,quota,{source:name+'攻斥指令 · '+n+'点冲击势能',elements:['electro'],...(star?{reactions:['stellarConduct'],directOnly:true}:{})});}
+          }
+          break;
+        }
         case '桑多涅':case '旅行者·冰':for(const rx of ['stellarConduct','stellarSwirl','stellarVortex'])add(rx+'Base',Math.min(name==='桑多涅'?14:7,(name==='桑多涅'?.007:.0035)*need(t,'atk')),name+'星辉祝赐');if(name==='桑多涅'&&cons>=1&&castE&&active)stellarBonus(30,name+'C1解算');break;
         case '钟离':if(castE&&cond.shielded)add('kx',20,name+'玉璋护盾');break;
         case '罗莎莉亚':if(castQ){add('cpct',Math.min(15,eligible(t,'cpct','rosariaQ')*.15),name+'Q');if(cons>=6)add('res_physical',20,name+'C6');}break;
@@ -296,10 +328,10 @@
         }
       }
     }catch{}
-    const stellarEnabler=members.some(({c})=>['桑多涅','奥黛塔','旅行者·冰'].includes(c.key))||config._metric?.reaction==='stellarConduct';
+    const stellarEnabler=members.some(({c})=>['桑多涅','奥黛塔','旅行者·冰','米提亚'].includes(c.key))||config._metric?.reaction==='stellarConduct';
     if(cond.stellarField&&stellarEnabler){const r=E.specialFactor('stellarConduct',{stellarConductCount:num(cond.stellarHits)});elementBonus('cryo',r*20,'星超导领域');elementBonus('electro',r*20,'星超导领域');}
     if(cond.superconductActive||cond.stellarField&&stellarEnabler)add('res_physical',40,cond.stellarField&&stellarEnabler?'极星辉域物抗降低':'普通超导减物抗已生效');
-    config.soloArea=cond.stellarField&&(['桑多涅','奥黛塔','旅行者·冰'].includes(primary.key)||config._metric?.reaction==='stellarConduct')?{dmg_cryo:E.specialFactor('stellarConduct',{stellarConductCount:num(cond.stellarHits)})*20,dmg_electro:E.specialFactor('stellarConduct',{stellarConductCount:num(cond.stellarHits)})*20,res_physical:40}:{};
+    config.soloArea=cond.stellarField&&(['桑多涅','奥黛塔','旅行者·冰','米提亚','瓦列里'].includes(primary.key)||config._metric?.reaction==='stellarConduct')?{dmg_cryo:E.specialFactor('stellarConduct',{stellarConductCount:num(cond.stellarHits)})*20,dmg_electro:E.specialFactor('stellarConduct',{stellarConductCount:num(cond.stellarHits)})*20,res_physical:40}:{};
     if(cond.superconductActive)config.soloArea.res_physical=40;
     for(const {key,value,source}of group.values())apply(key,value,source);
     config.dedupGroups=[...group.keys()];
@@ -344,6 +376,8 @@
   // Keep the complete numeric ledger above; only omit unrelated/no-effect rows from the user-facing report.
   function effectApplies(e,c){
     const normal=['normal','amplifying','additive'].includes(c.kind),key=e.key;
+    if(key==='stellarConductCdmg_electro')return c.rx==='stellarConduct'&&c.element==='electro';
+    if(key==='flat')return (!e.elements||e.elements.includes(c.element))&&(!e.reactions||e.reactions.includes(c.rx));
     if(key==='swirlCryo')return c.rx==='swirl'&&c.element==='cryo';
     const reactions=[...E.SPECIAL,...Object.keys(E.TRANSFORM),'vaporize','melt','aggravate','spread'];
     for(const rx of reactions)if(key===rx||['Base','Elevated','Cpct','Cdmg','Multi','Flat'].some(s=>key===rx+s))return c.rx===rx;
@@ -382,6 +416,7 @@
     return {...audit,records};
   }
   function effectLabel(key){
+    if(key==='stellarConductCdmg_electro')return '雷元素星超导暴击伤害';
     const direct={allDmg:'通用伤害加成',allElementDmg:'所有元素伤害加成',enemyDef:'敌人防御降低',enemyIgnore:'无视敌人防御',kx:'全抗性降低',flat:'附加基础伤害',masteryBorrowed:'元素精通分享',atkBorrowed:'固定攻击分享',rechargeBorrowed:'元素充能分享',aElementDmg:'普攻元素伤害加成',talentA:'普通攻击天赋',talentE:'元素战技天赋',talentQ:'元素爆发天赋',transformCrit:'指定剧变固定暴击率'};
     if(direct[key])return direct[key];if(E.LABELS[key])return E.LABELS[key];
     const ele=/^(res_|dmg_|cdmg_|cpct_)(.+)$/.exec(key);if(ele)return (E.ELEMENT[ele[2]]||ele[2])+({res_:'抗性降低',dmg_:'伤害加成',cdmg_:'暴击伤害',cpct_:'暴击率'})[ele[1]];

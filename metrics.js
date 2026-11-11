@@ -42,7 +42,7 @@
   };
   const stellar={'薇斯纳':{4:'stellarSwirl',5:'stellarSwirl',6:'stellarSwirl',8:'stellarSwirl'},'旅行者·冰':{2:'stellarConduct',4:'stellarConduct'},'莱欧斯利':{7:'stellarConduct'},'赛诺':{3:'stellarConduct',8:'stellarConduct',9:'stellarConduct'},'八重神子':{6:'stellarConduct',8:'stellarConduct'},'七七':{2:'stellarConduct'},'梦见月瑞希':{2:'stellarSwirl',6:'stellarSwirl',9:'stellarSwirl'}};
   const names={stellarConduct:'星超导',stellarSwirl:'星扩散',lunarCharged:'月感电',lunarBloom:'月绽放',lunarCrystallize:'月结晶'};
-  function fieldMinCons(key){return ({zibaiRadianceSpent:6})[key]||Number(/C([1-6])/.exec(key)?.[1]||0);}
+  function fieldMinCons(key){return ({zibaiRadianceSpent:6,valeriySkillActive:2})[key]||Number(/C([1-6])/.exec(key)?.[1]||0);}
   function skirkResourceInfo(config){const fromE=45+(Number(config.cons)>=2?10:0),extraCap=Number(config.cons)>=2?22:12,threshold=50+extraCap,requiredRifts=Math.max(0,Math.ceil((threshold-fromE)/8));return {fromE,extraCap,threshold,requiredRifts,defaultSerpent:fromE+8*requiredRifts};}
   function fullSelfStates(config){
     const c=Number(config.cons)||0,key=config.character,metric=config._metric||{},states=config.metricSettings?.states||{};
@@ -89,6 +89,8 @@
       '雅珂达':{jahodaHealEmActive:true,jahodaFlaskFullActive:c>=6},
       '哥伦比娅':{columbinaMoonlitStacks:3,columbinaDomainActive:true,columbinaBrillianceActive:c>=2},
       '伊涅芙':{ineffaReconfigureActive:true,ineffaCompositeActive:true},
+      '米提亚':{mityaCoreActive:true,mityaCritStacks:g.GV72.M.critStacks,mityaBeaconsHeld:g.GV72.beacons(c),mityaBeaconsSpent:g.GV72.beacons(c)},
+      '瓦列里':{valeriySkillActive:true,valeriyDirective:true,valeriyMomentum:g.GV72.momentumCap(c),valeriyDirectiveHits:g.GV72.V.directiveHits,valeriyC6Marked:c>=6},
       '菈乌玛':{laumaSkillActive:true,laumaShredActive:true,laumaHymnActive:true,laumaHymnRemaining:18}
     };
     const v={...(maps[key]||{})};
@@ -134,6 +136,26 @@
   function definitions(config){
     const key=config.character,cons=Number(config.cons)||0;
     const make=(id,title,entries,extra={})=>({id,title,entries,...extra});
+    if(key==='米提亚'){
+      const rx='stellarConduct',star=(mode,other={})=>({reaction:rx,mityaCore:mode,...other});
+      const steady=(other={})=>({mityaCore:'steady',offField:true,...other});
+      const spent=Math.min(g.GV72.beacons(cons),Number(settings(config).states.mityaBeaconsSpent??g.GV72.beacons(cons)));
+      return [
+        make('mitya-ca-stars','递变聚爆 · '+spent+'段星超导合计',[row(0)],star('overload',{recommended:true,note:'过载炉心；每消耗一枚信标独立结算一段雷元素星超导。不含普通雷伤起手、C4追加和C6随机补发。'})),
+        make('mitya-steady-detonate','后台稳态炉心 · 引爆'+spent+'枚信标',[row(6)],star('steady',steady({recommended:true,note:'引爆倍率随消耗信标数增长，为一次星超导命中；结算时仍持有的信标可单独调整。不计仅前台可用的增益。'}))),
+        make('mitya-ca-total','递变聚爆 · 起手及'+spent+'段星超导',[row(1),row(0)],star('overload',{note:'普通重击起手与每枚信标的星超导分别结算。'})),
+        make('mitya-ca-one','递变聚爆 · 单枚信标星超导',[row(0,{mityaBeaconsSpent:1})],star('overload')),
+        make('mitya-steady-consume','后台稳态炉心 · 消耗信标（单次）',[row(5)],star('steady',steady())),
+        make('mitya-steady-tick','后台稳态炉心 · 周期普通雷伤',[row(4)],steady({partyReaction:rx})),
+        make('mitya-q','元素爆发 · 过载炉心状态（普通雷伤）',[row(7)],{mityaCore:'overload',partyReaction:rx,note:'本次爆发按攻击力和精通计算普通雷伤；生成的3枚信标不直接计入伤害。'}),
+        make('mitya-q-steady','元素爆发 · 稳态炉心状态（普通雷伤）',[row(7)],{mityaCore:'steady',partyReaction:rx}),
+        make('mitya-e-tap','点按E · 普通雷伤',[row(2)]),
+        make('mitya-e-hold','长按E · 普通雷伤',[row(3)]),
+        ...(cons>=4?[make('mitya-c4-overload','C4 · 过载炉心额外星超导',[row(8)],star('overload',{note:'已累计消耗五枚信标，只计算这一次额外攻击。'})),make('mitya-c4-steady','C4 · 后台稳态炉心额外星超导',[row(8)],star('steady',steady({note:'已累计消耗五枚信标，只计算这一次额外攻击。'})))]:[]),
+        ...[9,10,11].map(i=>make('detail-'+i,R[key].details[i].title,[row(i)]))
+      ];
+    }
+    if(key==='瓦列里')return R[key].details.map((d,i)=>make('valeriy-'+i,d.title,[row(i)],{recommended:i<2,note:i===1||i===3?'6命的伤害提升仅给本类攻击；目标是否已被前次攻击标记由自身增益状态决定。':undefined}));
     if(key==='桑多涅'){
       const result=[];
       for(const [mode,rx]of [['sc','stellarConduct'],['ss','stellarSwirl']])for(const [part,index,label]of [['ca',1,'重击'],['q',5,'元素爆发'],['e',3,'第二枚棱晶弹']])result.push(make('sandrone-'+mode+'-'+part,label+names[rx]+'伤害',[row(index)],{reaction:rx,mode,recommended:mode==='sc'&&part!=='e',note:part==='q'?'只计算聚能光束；前三段轰炸是普通冰伤。':part==='ca'?'一次冷凝射线，不含普通冰伤扫射。':'本项是第二枚弹丸，功率强化条件可在详细条件调整。'}));
@@ -197,9 +219,10 @@
   function configFor(config,metric){
     const m=typeof metric==='string'?definition(config,metric):metric;if(!m)throw Error('请选择当前角色有效的伤害指标。');
     const cfg=clone(config);cfg._metric=clone(m);cfg.goal='rotation';cfg.rotation=clone(m.entries);cfg.conditions={...cfg.conditions};
+    if(m.offField)cfg.conditions.onField=false;
     if(/激化/.test(m.title))cfg.conditions.quicken=true;
     if(m.reaction||/蒸发|融化|激化|扩散|绽放|感电|燃烧|丰穰|超载|碎冰|超导/.test(m.title)){cfg.conditions.soloAura=true;cfg.conditions.teamAura=true;}
-    if(m.reaction==='stellarConduct'){cfg.conditions.stellarField=true;cfg.conditions.stellarHits=Number(settings(config).stellarHits);}
+    if(m.reaction==='stellarConduct'||m.partyReaction==='stellarConduct'||config.character==='瓦列里'&&settings(config).states.valeriyFieldActive){cfg.conditions.stellarField=true;cfg.conditions.stellarHits=Number(settings(config).stellarHits);}
     if(m.reaction==='stellarSwirl')cfg.conditions.stellarField=false;
     const s=settings(config);cfg.teammates=(cfg.teammates||[]).map(t=>({...t,...(s.artifactMode==='full'?{setActive:true}:{}),...(s.weaponMode==='full'?{weaponActive:true,...(t.weapon==='漩流颂歌'?{weaponStacks:3}:{})}:{})}));
     if(s.states.currentHpPct!==undefined)cfg.conditions.currentHpPct=Number(s.states.currentHpPct);
@@ -259,7 +282,7 @@
     if(c.key==='布伦妮'&&metric.requires==='pruneElement'&&s.states.pruneAbsorbedElement===undefined)v.pruneAbsorbedElement='cryo';
     if(c.key==='雅珂达'){if(metric.requires==='jahodaBall'&&s.states.jahodaFlaskElement===undefined)v.jahodaFlaskElement='cryo';if(metric.requires==='jahodaRobot'&&s.states.jahodaRobotElement===undefined)v.jahodaRobotElement='cryo';}
     if(c.key==='雷泽'&&metric.requires==='razorMagic')v.razorMagicAvailable=true;
-    if(/后台/.test(metric.title))v.off_field=true;
+    if(metric.offField||/后台/.test(metric.title))v.off_field=true;
     if(c.key==='奥黛塔'&&s.ownBuffMode==='full'&&(v.off_field??p.off_field)&&config.cons<6)v.odetteSelfSplendor=0;
     if(metric.reaction?.startsWith('stellar')){
       Object.assign(v,{Stellar:true,stellarConductCount:Number(s.stellarHits)});
@@ -300,6 +323,9 @@
     if(config.character==='芙宁娜')notes.push('本次气氛'+state.fanfare+'；C2生命提升目标'+state.furinaC2HP+'%（按命座生效）');
     if(config.character==='洛恩')notes.push('本次争胜'+state.争胜+'；乘兴状态'+(state.lohenHighSpirits?'已生效，战技天赋+1':'未生效'));
     if(config.character==='玛薇卡')notes.push('本次战意'+state.mavuikaFightingSpirit+'；Q后增伤目标'+state.mavuikaQBuffDmg+'%');
+    if(config.character==='米提亚'&&metric.mityaCore){
+      notes.push('炉心：'+(metric.mityaCore==='steady'?'稳态，结算时持有'+state.mityaBeaconsHeld+'枚信标':'过载')+(metric.offField?'；米提亚处于后台。':'；米提亚处于前台。'));
+    }
     if(metric.reaction==='stellarConduct')notes.push('极星辉域已存在；上一结算周期'+s.stellarHits+'次有效附着，反应倍率'+E.specialFactor('stellarConduct',{stellarConductCount:s.stellarHits}).toFixed(2));
     if(metric.reaction==='stellarSwirl')notes.push('对应辉映与星扩散现场已成立');
     if(metric.reaction?.startsWith('lunar'))notes.push('对应月反应场景及本次攻击资源已具备；默认单人满足满辉天赋前提');

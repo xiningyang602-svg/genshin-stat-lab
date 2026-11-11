@@ -146,3 +146,4 @@
     return out;};
   F.hasFlat=config=>config.character==='杜林'&&config.cons>=1||config.character==='沃雅妮莎'&&config.conditions?.vodyResourcesActive||config.character==='菈乌玛'&&config.conditions?.laumaHymnActive;
 })(typeof globalThis!=='undefined'?globalThis:this);
+if(typeof require==='function')require('./v72.js');

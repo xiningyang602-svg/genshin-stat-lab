@@ -18,7 +18,7 @@
   const PART_KEYS=['atk','hp','def','mastery','recharge','cpct','cdmg','dmg','phy','coloringDmg','heal','shield'];
   const SKILLS=['a','a2','a3','e','e2','q','q2','q3','nightsoul','fy'];
   const defaultWeapon={sword:'天目影打刀',claymore:'试作古华',polearm:'「渔获」',bow:'试作澹月',catalyst:'流浪乐章'};
-  const signatures={'那维莱特':'万世流涌大典','胡桃':'护摩之杖','艾尔海森':'裁叶萃光','兹白':'朏魄含光','菲林斯':'血染荒城','雷电将军':'薙草之稻光','诺艾尔':'白影剑','荒泷一斗':'赤角石溃杵','玛薇卡':'焚曜千阳','丝柯克':'苍耀','阿蕾奇诺':'赤月之形','珊瑚宫心海':'不灭月华','奈芙尔':'真语秘匣'};
+  const signatures={'那维莱特':'万世流涌大典','胡桃':'护摩之杖','艾尔海森':'裁叶萃光','兹白':'朏魄含光','菲林斯':'血染荒城','雷电将军':'薙草之稻光','诺艾尔':'白影剑','荒泷一斗':'赤角石溃杵','玛薇卡':'焚曜千阳','丝柯克':'苍耀','阿蕾奇诺':'赤月之形','珊瑚宫心海':'不灭月华','奈芙尔':'真语秘匣','米提亚':'秘星典谕'};
   const clone=o=>JSON.parse(JSON.stringify(o));
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
   const num=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
@@ -43,6 +43,7 @@
       '薙草之稻光':[['engulfingBurstActive','薙草Q后12秒充能有效','bool']],
       '朏魄含光':[['lightbearingSkillActive','专武E后5秒效果有效','bool']],
       '真语秘匣':[['trueWordSkillActive','专武E后12秒精通有效','bool'],['trueWordLunarActive','专武月绽后4秒暴伤有效','bool']],
+      '秘星典谕':[['starsealedSkillActive','晶质调合：E后20秒仍有效','bool'],['starsealedStacks','炬中法度：当前有效层数',0,3]],
       '血染荒城':[['bloodBurstActive','专武Q后3.5秒月伤有效','bool'],['bloodLunarActive','专武月感电后6秒暴伤有效','bool']],
       '星鹫赤羽':[['plumageSwirlActive','专武扩散后12秒攻击有效','bool']],
       '山王长牙':[['mountainStacks','专武悬木祝赐当前层数',0,6]],
@@ -117,6 +118,14 @@
   const weaponCache={};
   function weaponBuffs(w) {
     if(w.name==='自定义武器') return [];
+    if(w.name==='秘星典谕'){
+      const r=(w.refine||1)-1,value=i=>parseFloat(w.passive.datas[i][r]);
+      return [
+        {id:'weapon:0',title:'常驻暴击伤害',isStatic:true,data:{cdmg:value(0)}},
+        {id:'weapon:1',title:'晶质调合及炬中法度 · 元素精通',check:({params:p})=>p.starsealedSkillActive,data:{mastery:({params:p})=>value(1)+value(2)*p.starsealedStacks}},
+        {id:'weapon:2',title:'炬中法度 · 辉映星超导暴击伤害',check:({params:p})=>p.starsealedSkillActive&&p.starsealedRadiance,data:{stellarConductCdmg:({params:p})=>value(3)*p.starsealedStacks}}
+      ];
+    }
     if(!weaponCache[w.type]) weaponCache[w.type]=global.GWEAPONS[w.type](step,staticStep);
     const list=weaponCache[w.type][w.name]||[];
     const result=(Array.isArray(list)?list:[list]).map((b,i)=>{
@@ -550,9 +559,9 @@
           const eligible=calls.map((call,i)=>({call,i})).filter(({call})=>{
             if(call.projection)return false;
             if(call.kind==='indirect'||f.indirectOnly)return false;
+            if(f.elements&&!f.elements.includes(call.element))return false;
             if(f.reactions)return f.reactions.includes(call.rx);
             if(!['normal','amplifying','additive'].includes(call.kind))return false;
-            if(f.elements&&!f.elements.includes(call.element))return false;
             const tags=call.tags||[];
             if(f.skills)return tags.some(t=>f.skills.includes(t));
             if(f.scope==='a')return tags.includes('a');
@@ -657,7 +666,7 @@
       for(const t of tags)if(attr[t]){const b=attr[t];baseDmg+=calc(attr.atk)*b.pct/100;multi+=b.multi;plus+=b.plus;dmgBonus+=b.dmg;cr+=b.cpct;cd+=b.cdmg;defDown+=b.def;ignore+=b.ignore;}
       baseDmg=baseDmg*(1+multi/100)+plus;
       cr+=num(attr['cpct_'+element]);cd+=num(attr['cdmg_'+element]);
-      if(SPECIAL.has(rx)){cr+=num(attr[rx+'Cpct']);cd+=num(attr[rx+'Cdmg']);}
+      if(SPECIAL.has(rx)){cr+=num(attr[rx+'Cpct'])+num(attr[rx+'Cpct_'+element]);cd+=num(attr[rx+'Cdmg'])+num(attr[rx+'Cdmg_'+element]);}
       else {dmgBonus+=num(attr.allDmg)+(element==='physical'?0:num(attr.allElementDmg))+num(attr['dmg_'+element]);if(element!=='physical'&&tags.includes('a'))dmgBonus+=num(attr.aElementDmg);}
       const res=getRes(element,attr,config,scope),lv=ds.level;
       const def=(lv+100)/((lv+100)+(num(config.enemy?.level,100)+100)*(1-clamp(defDown/100,0,1))*(1-clamp(ignore/100,0,1)));
@@ -759,15 +768,15 @@
   }
   function defaultConfig(key='那维莱特') {
     const c=character(key)||DATA.characters[0];const attrs=RULES[c.key].mainAttr||'atk';
-    const scale=attrs.startsWith('hp')?'hpPct':attrs.startsWith('def')?'defPct':c.key==='奈芙尔'?'mastery':'atkPct';
+    const emDefaults=['奈芙尔','米提亚'].includes(c.key),scale=attrs.startsWith('hp')?'hpPct':attrs.startsWith('def')?'defPct':emDefaults?'mastery':'atkPct';
     let weapon=signatures[c.key]||defaultWeapon[c.weapon];
     if(!DATA.weapons.some(w=>w.name===weapon&&w.type===c.weapon))weapon=defaultWeapon[c.weapon];
     return {character:c.key,travelerGender:'female',level:90,cons:0,talents:{a:10,e:10,q:10},weapon,refine:weapon==='「渔获」'?5:1,
-      customWeapon:{base:510,bonusKey:'none',bonus:0},mains:{sands:scale,goblet:c.key==='奈芙尔'?'mastery':'dmg',circlet:c.key==='珊瑚宫心海'?'heal':'cdmg'},sets:[],
+      customWeapon:{base:510,bonusKey:'none',bonus:0},mains:{sands:scale,goblet:emDefaults?'mastery':'dmg',circlet:c.key==='珊瑚宫心海'?'heal':'cdmg'},sets:[],
       budget:30,allocationView:'both',artifactStarts:[4,4,4,4,4],rollQuality:'average',autoMains:false,physical:false,minRecharge:{solo:100,team:100},rotation:defaultRotation(c.key),
       team:{},contributors:[],disabledBuffs:[],parameters:{solo:{},team:{}},enemy:{level:100,resistance:10,resistances:{}},
       normalizedBudget:true,goal:'rotation',singleIndex:c.key==='那维莱特'?0:defaultRotation(c.key)[0]?.index||0,singleReaction:'native',singleCoverage:100,singleParams:{},
-      panelMode:'artifacts',panelSettings:{hpPct:100},panelExtra:{atkPct:''},artifactPanel:artifactMainStats({sands:scale,goblet:c.key==='奈芙尔'?'mastery':'dmg',circlet:c.key==='珊瑚宫心海'?'heal':'cdmg'}),
+      panelMode:'artifacts',panelSettings:{hpPct:100},panelExtra:{atkPct:''},artifactPanel:artifactMainStats({sands:scale,goblet:emDefaults?'mastery':'dmg',circlet:c.key==='珊瑚宫心海'?'heal':'cdmg'}),
       supportMode:'full',teammates:[],teamRows:[],reservedRechargeRolls:{solo:0,team:0},conditions:{onField:true,currentHpPct:c.key==='胡桃'?49:100,moonsign:1,hexerei:false,homework:false,stellarHits:0,vortexHits:0,neuvStacks:0,skirkStacks:0,skirkRifts:0,skirkSerpent:45,lohenStacks:0,lohenMasterful:false,lohenCryoReactionActive:false,lohenNormalBuffActive:false,lohenHighSpirits:false,vesnaOrder:0,vesnaRadiance:false,vesnaArmed:false,nahidaQFieldActive:false,nahidaMarked:false,nahidaMarkedEnemies:0,arleBond:0,arleC6SkillBuff:false,mavuikaFightingSpirit:100,mavuikaQBuffDmg:0,mavuikaBurstActive:false,mavuikaNightsoulBurstActive:false,mavuikaC1Active:false,skirkSpecialQActive:false,veil:0,soloResolve:0,teamResolve:0,vesnaCryoAnemo:1,vesnaOthers:0,otherPyro:0,naviaElements:0,pyroAura:true,swirlElement:'pyro',absorbedElement:'pyro',reactionOwnership:'owner'},
       panel:{hp:'',atk:'',def:'',mastery:'',cpct:'',cdmg:'',recharge:'',dmg:'',phy:0,heal:0}};
   }
