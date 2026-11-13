@@ -233,27 +233,219 @@
     for(const k of Object.keys(stats))stats[k]=Number(stats[k].toFixed(6));
     return {mains,stats};
   }
-  let scriptPromise;
   function fitImageDimensions(width,height,limit=24000000){const scale=Math.min(1,Math.sqrt(limit/(width*height)));return {width:Math.max(1,Math.floor(width*scale)),height:Math.max(1,Math.floor(height*scale)),scaled:scale<1};}
-  async function load(){if(g.Tesseract)return;if(!scriptPromise)scriptPromise=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=new URL('vendor/ocr/tesseract.min.js',document.baseURI).href;s.onload=resolve;s.onerror=()=>{scriptPromise=null;reject(Error('识别引擎加载失败，请检查网络或手动填写面板。'));};document.head.appendChild(s);});await scriptPromise;}
+  const models={chi_sim:{label:'中文',bytes:1718768},eng:{label:'数字',bytes:2952873}};
+  const totalModelBytes=models.chi_sim.bytes+models.eng.bytes;
+  const modelIdleMs=30000,modelWaitMs=120000,coreWaitMs=60000,jobWaitMs=30000,imageWaitMs=20000;
+
+  function waitFor(promise,signal,ms,message,discard){
+    return new Promise((resolve,reject)=>{
+      let pending=true;
+      const finish=(settle,value)=>{
+        if(!pending)return false;
+        pending=false;
+        clearTimeout(timer);
+        signal.removeEventListener('abort',abort);
+        settle(value);
+        return true;
+      };
+      const abort=()=>finish(reject,signal.reason);
+      const timer=setTimeout(()=>finish(reject,Error(message)),ms);
+      signal.addEventListener('abort',abort,{once:true});
+      promise.then(value=>{if(!finish(resolve,value))discard?.(value);},error=>finish(reject,error));
+      if(signal.aborted)abort();
+    });
+  }
+
+  async function fetchModel(base,name,signal,onBytes){
+    const {label,bytes}=models[name],request=new AbortController();
+    const abort=()=>request.abort(signal.reason);
+    const timeout=()=>request.abort(Error(label+'识别模型下载超时，请检查网络后重试。'));
+    let timer,deadline;
+    const resetTimer=()=>{clearTimeout(timer);timer=setTimeout(timeout,modelIdleMs);};
+    signal.addEventListener('abort',abort,{once:true});
+    if(signal.aborted)abort();
+    try{
+      resetTimer();
+      deadline=setTimeout(timeout,modelWaitMs);
+      const response=await fetch(new URL('lang/'+name+'.traineddata.gz',base),{signal:request.signal});
+      if(!response.ok)throw Error(label+'识别模型暂时无法下载（HTTP '+response.status+'），请重试。');
+      const invalid=()=>Error(label+'识别模型下载不完整，请重试。');
+      const reader=response.body?.getReader(),data=new Uint8Array(bytes);
+      let loaded=0;
+      if(reader){
+        for(;;){
+          const {done,value}=await reader.read();
+          if(done)break;
+          if(loaded+value.length>bytes)throw invalid();
+          data.set(value,loaded);
+          loaded+=value.length;
+          resetTimer();
+          onBytes(loaded);
+        }
+      }else{
+        const downloaded=new Uint8Array(await response.arrayBuffer());
+        if(downloaded.length!==bytes)throw invalid();
+        data.set(downloaded);
+        loaded=bytes;
+        onBytes(loaded);
+      }
+      if(loaded!==bytes||data[0]!==31||data[1]!==139)throw invalid();
+      return data;
+    }catch(error){
+      if(request.signal.aborted)throw request.signal.reason;
+      if(error instanceof TypeError)throw Error(label+'识别模型下载中断，请检查网络后重试。');
+      throw error;
+    }finally{
+      clearTimeout(timer);
+      clearTimeout(deadline);
+      signal.removeEventListener('abort',abort);
+      request.abort();
+    }
+  }
+
+  // The vendored Tesseract.js 7 worker uses this message protocol. Owning the
+  // worker here lets cancellation and startup failures terminate it immediately.
+  function openWorker(base,signal,onStatus){
+    let worker,job,nextId=0,failure;
+    const stopped='本地识别引擎运行失败，请重试。';
+    try{worker=new Worker(new URL('worker.min.js',base));}
+    catch{throw Error('浏览器无法启动本地识别引擎，请在浏览器中打开公开网站后重试。');}
+    const fail=message=>{failure=Error(message);const active=job;job=null;active?.reject(failure);};
+    worker.onerror=event=>{event.preventDefault();fail(job?.message||stopped);};
+    worker.onmessageerror=()=>fail(job?.message||stopped);
+    worker.onmessage=({data})=>{
+      if(!job||data.jobId!==job.id)return;
+      if(data.status==='progress'){onStatus(data.data);return;}
+      if(data.status==='reject'){console.debug('[StatLab OCR]',data.action,data.data);fail(job.message);return;}
+      if(data.status==='resolve'){const done=job;job=null;done.resolve(data.data);}
+    };
+    return {
+      run(action,payload,message,timeoutMessage,ms=jobWaitMs,transfer=[]){
+        if(signal.aborted)return Promise.reject(signal.reason);
+        if(failure)return Promise.reject(failure);
+        const result=new Promise((resolve,reject)=>{
+          const id=String(++nextId);
+          job={id,resolve,reject,message};
+          try{worker.postMessage({workerId:'StatLabOCR',jobId:id,action,payload},transfer);}
+          catch{fail(message);}
+        });
+        return waitFor(result,signal,ms,timeoutMessage);
+      },
+      close(){fail(stopped);worker.terminate();},
+    };
+  }
+
   async function recognize(file,config,onProgress=()=>{},signal){
     if(location.protocol==='file:')throw Error('截图识别请使用在线网站；离线包仍可手填面板或圣遗物合计计算。');
     if(file.size>15*1024*1024)throw Error('截图请小于15MB。');
     if(!/^image\/(png|jpeg|webp)$/.test(file.type))throw Error('请选择PNG、JPG或WebP截图。');
-    let bitmap=await createImageBitmap(file);const fitted=fitImageDimensions(bitmap.width,bitmap.height);
-    if(fitted.scaled){onProgress('自动适配大尺寸图片…',1);try{const resized=await createImageBitmap(bitmap,{resizeWidth:fitted.width,resizeHeight:fitted.height,resizeQuality:'high'});bitmap.close();bitmap=resized;}catch(error){bitmap.close();throw Error('当前设备无法处理这张大图，请裁掉无关区域后重试。');}}
-    let worker;onProgress('准备本地识别，首次需要加载约8MB数据…',1);
-    const cancelled=()=>{if(signal?.aborted)throw Error('已取消识别。');};
+    const session=new AbortController(),active=session.signal;
+    const abort=()=>session.abort(Error('已取消识别。'));
+    signal?.addEventListener('abort',abort,{once:true});
+    if(signal?.aborted)abort();
+    const check=()=>{if(active.aborted)throw active.reason;};
+    const decodeTimeout='读取截图超时，请重试。';
+    const decode=(source,options)=>waitFor(createImageBitmap(source,options),active,imageWaitMs,decodeTimeout,late=>late.close());
+    const base=new URL('vendor/ocr/',document.baseURI);
+    let bitmap,worker,stage='启动本地识别引擎',phase='startup',lastMessage;
+    const loaded={chi_sim:0,eng:0};
+    const mb=bytes=>(bytes/1e6).toFixed(1);
+    function report(){
+      let message,progress;
+      if(phase==='startup'){
+        const received=loaded.chi_sim+loaded.eng;
+        message=stage+'… · 模型 '+mb(received)+' / '+mb(totalModelBytes)+' MB';
+        progress=2+Math.min(4,4*received/totalModelBytes);
+      }else if(phase==='numbers'){
+        message='加载数字识别模型… '+mb(loaded.eng)+' / '+mb(models.eng.bytes)+' MB';
+        progress=55;
+      }
+      if(message&&message!==lastMessage&&!active.aborted){lastMessage=message;onProgress(message,progress);}
+    }
+    async function activate(name,data){
+      const label=models[name].label;
+      await worker.run('loadLanguage',{langs:[{code:name,data}],options:{lstmOnly:true,gzip:true,cacheMethod:'none'}},
+        label+'识别模型无法读取，请重试。',label+'识别模型读取超时，请重试。',jobWaitMs,[data.buffer]);
+      await worker.run('initialize',{langs:name,oem:1,config:{}},
+        label+'识别模型无法启动，请重试。',label+'识别模型启动超时，请重试。');
+    }
     try{
-      await load();cancelled();const base=new URL('vendor/ocr/',document.baseURI).href;
-      worker=await g.Tesseract.createWorker('chi_sim',1,{workerPath:base+'worker.min.js',corePath:base+'core',langPath:base+'lang',workerBlobURL:false,logger:m=>{if(m.status==='recognizing text')cancelled();}});
-      signal?.addEventListener('abort',()=>worker.terminate(),{once:true});let language='chi_sim';
-      const adapter={width:bitmap.width,height:bitmap.height,async rows(region){const canvas=document.createElement('canvas');canvas.width=Math.ceil(region.w);canvas.height=Math.ceil(region.h);const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(bitmap,region.x,region.y,region.w,region.h,0,0,canvas.width,canvas.height);return segmentRows(ctx.getImageData(0,0,canvas.width,canvas.height),region);},async language(name){cancelled();if(language!==name){await worker.reinitialize(name,1);language=name;}},async read(rect,opt){cancelled();const r=rect||{x:0,y:0,w:bitmap.width,h:bitmap.height},scale=ocrScale(rect,bitmap.width,bitmap.height,opt),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(r.w*scale));canvas.height=Math.max(1,Math.round(r.h*scale));const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(bitmap,r.x,r.y,r.w,r.h,0,0,canvas.width,canvas.height);const image=ctx.getImageData(0,0,canvas.width,canvas.height);preparePixels(image,opt);ctx.putImageData(image,0,0);await worker.setParameters({tessedit_pageseg_mode:opt.psm,tessedit_char_whitelist:opt.digits?'0123456789.%+-':'',preserve_interword_spaces:'0'});const {data}=await worker.recognize(canvas,{},{text:true,tsv:true});data.tsv=normalizeTsv(data.tsv,r,scale);return data;}};
+      check();
+      onProgress('正在打开截图…',1);
+      try{bitmap=await decode(file);}
+      catch(error){if(active.aborted||error.message===decodeTimeout)throw error;throw Error('无法打开这张截图，请重新保存为 PNG 或 JPG 后重试。');}
+      const fitted=fitImageDimensions(bitmap.width,bitmap.height);
+      if(fitted.scaled){
+        onProgress('自动适配大尺寸图片…',1);
+        try{const resized=await decode(bitmap,{resizeWidth:fitted.width,resizeHeight:fitted.height,resizeQuality:'high'});bitmap.close();bitmap=resized;}
+        catch(error){if(active.aborted)throw error;throw Error('当前设备无法处理这张大图，请裁掉无关区域后重试。');}
+      }
+      check();
+      report();
+      worker=openWorker(base,active,status=>{
+        if(status?.status==='loading tesseract core')stage='加载本地识别引擎';
+        if(status?.status==='initializing tesseract')stage='初始化本地识别引擎';
+        report();
+      });
+      const download=name=>fetchModel(base,name,active,bytes=>{loaded[name]=bytes;report();});
+      const engine=worker.run('load',{options:{lstmOnly:true,corePath:new URL('core',base).href,logging:false}},
+        '本地识别引擎加载失败，请检查网络后重试。','本地识别引擎加载超时，请检查网络后重试。',coreWaitMs);
+      const chinese=download('chi_sim');
+      const english=download('eng');
+      english.catch(()=>{}); // Its error is reported when the digit pass needs it.
+      const [,chineseData]=await Promise.all([engine,chinese]);
+      stage='初始化中文识别模型';report();
+      await activate('chi_sim',chineseData);
+      phase='scanning';
+      let language='chi_sim';
+      const adapter={
+        width:bitmap.width,height:bitmap.height,
+        async rows(region){
+          check();
+          const canvas=document.createElement('canvas');canvas.width=Math.ceil(region.w);canvas.height=Math.ceil(region.h);
+          const ctx=canvas.getContext('2d',{willReadFrequently:true});
+          ctx.drawImage(bitmap,region.x,region.y,region.w,region.h,0,0,canvas.width,canvas.height);
+          return segmentRows(ctx.getImageData(0,0,canvas.width,canvas.height),region);
+        },
+        async language(name){
+          check();
+          if(language===name)return;
+          phase='numbers';report();
+          const data=await english;
+          phase='scanning';
+          onProgress('初始化数字识别模型…',55);
+          await activate(name,data);
+          language=name;
+        },
+        async read(rect,opt){
+          check();
+          const r=rect||{x:0,y:0,w:bitmap.width,h:bitmap.height},scale=ocrScale(rect,bitmap.width,bitmap.height,opt);
+          const canvas=document.createElement('canvas');
+          canvas.width=Math.max(1,Math.round(r.w*scale));canvas.height=Math.max(1,Math.round(r.h*scale));
+          const ctx=canvas.getContext('2d',{willReadFrequently:true});
+          ctx.drawImage(bitmap,r.x,r.y,r.w,r.h,0,0,canvas.width,canvas.height);
+          const image=ctx.getImageData(0,0,canvas.width,canvas.height);
+          preparePixels(image,opt);ctx.putImageData(image,0,0);
+          const encode=new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob.arrayBuffer()):reject(Error('无法读取截图图像，请重试。'))));
+          const bytes=await waitFor(encode,active,imageWaitMs,'读取截图图像超时，请重试。');
+          const options={tessedit_pageseg_mode:opt.psm,tessedit_char_whitelist:opt.digits?'0123456789.%+-':'',preserve_interword_spaces:'0'};
+          const data=await worker.run('recognize',{image:new Uint8Array(bytes),options,output:{text:true,tsv:true}},
+            '本地识别中断，请重试。','读取截图文字超时，请重试。',jobWaitMs,[bytes]);
+          data.tsv=normalizeTsv(data.tsv,r,scale);
+          return data;
+        },
+      };
       const draft=await scan(adapter,config,onProgress);
       for(let i=0;i<5;i++){const r=draft.regions[i],w=Math.min(r.w,r.font*8.5),canvas=document.createElement('canvas');canvas.width=Math.round(w*2);canvas.height=Math.round(r.h*2);canvas.getContext('2d').drawImage(bitmap,r.x,r.y,w,r.h,0,0,canvas.width,canvas.height);draft.pieces[i].preview=canvas.toDataURL('image/jpeg',.92);}
       delete draft.regions;
       return draft;
-    }finally{bitmap.close();if(worker)await worker.terminate().catch(()=>{});}
+    }finally{
+      signal?.removeEventListener('abort',abort);
+      session.abort();
+      worker?.close();
+      bitmap?.close();
+    }
   }
   g.GPanelImport={compact,label,numeric,tsvLines,normalizeTsv,ocrScale,mergeTsv,overviewTiles,scopeLines,locate,textPixel,digitThreshold,preparePixels,segmentRows,numericRegion,mainKeyFromNumber,numberChoice,reconcilePiece,fitImageDimensions,scan,configuration,possibleCounts,validate,recognize};
   if(typeof module!=='undefined')module.exports=g.GPanelImport;
