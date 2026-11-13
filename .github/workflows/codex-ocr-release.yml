@@ -1,0 +1,28 @@
+name: Verify Teyvat OCR release
+on:
+  push:
+    branches: [codex-ocr-stage-20261113]
+    paths: ['.codex-release-ocr/manifest.json']
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Verify and build clean release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(git rev-parse HEAD^)
+          test "$base" = e0dc941dac026719aa424e1700f9f2dac6088a6e
+          python .codex-release-ocr/rebuild.py
+          git rm --cached -r -- .codex-release-ocr .github/workflows/codex-ocr-release.yml
+          git add -- .nojekyll README.md release-manifest.json *.js *.html *.css *.txt teyvat-offline.zip vendor/ocr
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          tree=$(git write-tree)
+          commit=$(git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit-tree "$tree" -p "$base" -m 'Fix local OCR progress, timeouts and cancellation')
+          git push origin "$commit:refs/heads/codex-ocr-20261113"
+          printf 'Verified release commit: %s\n' "$commit"
