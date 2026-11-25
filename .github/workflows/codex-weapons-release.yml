@@ -1,0 +1,28 @@
+name: Verify Teyvat weapon comparison release
+on:
+  push:
+    branches: [codex-weapons-stage-20261125-2]
+    paths: ['.codex-release-weapons/manifest.json']
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Verify and build clean release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(git rev-parse HEAD^)
+          test "$base" = e20b0fc80d81dee82ccd978f2f68708d155c4243
+          python .codex-release-weapons/rebuild.py
+          git rm --cached -r -- .codex-release-weapons .github/workflows/codex-weapons-release.yml
+          git add -- .nojekyll README.md release-manifest.json *.js *.html *.css *.txt teyvat-offline.zip vendor/ocr
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          tree=$(git write-tree)
+          commit=$(git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit-tree "$tree" -p "$base" -m 'Add independent equal-budget weapon comparison')
+          git push origin "$commit:refs/heads/codex-weapons-20261125"
+          printf 'Verified release commit: %s\n' "$commit"
