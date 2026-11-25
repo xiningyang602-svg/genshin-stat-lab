@@ -2,6 +2,10 @@
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fbfaf3"><title>使用说明 · 提瓦特词条实验室</title><script src="appearance.js?rev=appearance-20261111"></script><link rel="stylesheet" href="style.css?rev=appearance-20261111"><link rel="stylesheet" href="appearance.css?rev=appearance-20261111"><style>.guide{max-width:900px;margin:auto;padding:30px 22px 70px;line-height:1.9}.guide h1{font-size:28px}.guide h2{font-size:20px;margin:28px 0 12px}.guide p,.guide li{margin:9px 0;font-size:14px}.guide .note{padding:15px 18px;background:var(--accent-wash);border-radius:12px}.guide table{width:100%;border-collapse:collapse;font-size:13px}.guide td,.guide th{padding:9px;text-align:left;border-bottom:1px solid var(--rule)}</style></head>
 <body><main class="guide"><a href="index.html">← 返回计算器</a><h1>用相同伤害指标，比较单人与组队。</h1>
 <p>选择角色、命座、武器和精炼，以及沙、杯、冠主属性。勾选角色伤害指标后，每个指标分别优化期望伤害，同时显示该分配下的暴击伤害。单人与组队共用相同技能分支、命中段数和反应类型。</p>
+<h2>有效词条数与最优占比</h2>
+<p>在“词条收益”填写完整常驻面板，或识别并采用圣遗物截图后，点击计算会显示当前指标的有效副词条数、同词条数的最优参考伤害和当前达到的百分比。单人与组队分别求值，多个指标各自比较。这里的最优参考固定当前沙、杯、冠、武器、命座、套装与增益，采用连续数值搜索。</p>
+<p>计数先扣除五件主属性，再用每次五星平均强化值折算。小攻击以90级角色加所选武器的基础攻击折算，小生命、小防御用90级角色基础值。只用于循环的充能不计预算；通过角色、套装或武器直接转化为伤害的充能可计入。涉及伤害的副属性即使当前已经溢出，仍保留为可重新分配的预算。常驻面板的计数受显示舍入影响，等级不同或不能唯一反推时可改用截图或圣遗物合计。</p>
+<p>拖入截图前可以留空三个主属性。识别后原来的沙、杯、冠框会显示读到的主属性，在核对区修正后也会同步。采用截图时这三项自动保存。</p>
 <h2>用你的实际装备计算词条收益</h2>
 <p>“词条收益”有两个入口：填写<strong>游戏单人常驻面板</strong>，或点击<strong>选择圣遗物截图</strong>。先选对主角色、武器精炼、命座、天赋、套装与三个主属性。手填时只留主C一人，等待E/Q、叠层、队友效果结束，填写生命、攻击、防御、精通、双暴、充能和本元素伤害等角色详情数值；默认满生命、无护盾、远离敌人。读取面板时生命比例可另填，与伤害指标预设分开。</p>
 <p>常驻面板已包含的永久被动和属性转化先剥离，再与装备输入一样重建每一次伤害，追加一条会重新计算转化、队友联动与封顶。幻灭、黑曜、逐影和冰套条件暴击不属于这里的常驻输入。玛薇卡C2进入夜魂时改变基础攻击，仅总攻击无法区分大攻击和小攻击，因此另需五件圣遗物攻击%合计；截图入口可直接提供它。四风原典及金律铸影的输入阶段无法从总面板唯一确定时，会明确要求使用装备合计或截图，避免假定层数。</p>

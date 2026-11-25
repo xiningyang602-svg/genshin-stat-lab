@@ -265,3 +265,15 @@
     padding-inline: 5px;
   }
 }
+.substat-score-card{margin-bottom:16px}
+.roll-score-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.roll-score-grid>.roll-score:only-child{grid-column:1/-1}
+.roll-score{min-width:0}
+.roll-score h4{font-size:1rem;margin:0 0 8px}
+.roll-count-line{color:var(--label);font-size:.9375rem;margin:0 0 7px}
+.roll-count-line strong{color:var(--ink);font-size:1.375rem;margin-inline:4px}
+.roll-score-percent{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 10px;margin:0 0 7px}
+.roll-score-percent strong{font-size:1.875rem;color:var(--accent)}
+.roll-score-percent span,.roll-score-damage{font-size:.875rem;color:var(--label)}
+.roll-score-table :is(th,td):nth-child(n+2){text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:600px){.roll-score-grid{grid-template-columns:minmax(0,1fr);gap:16px}.roll-score+.roll-score{border-top:1px solid var(--rule);padding-top:14px}}

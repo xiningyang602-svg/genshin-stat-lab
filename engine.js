@@ -823,14 +823,18 @@
     }
     const witness=dfs(0,keys.map(k=>allocation[k]));return {witness,nodes,exhausted:nodes>maxNodes};
   }
-  async function optimize(config,scope='solo',onProgress=()=>{}) {
-    const budget=num(config.budget);if(budget<0||budget>60)throw new Error('有效等效副词条总数需在0–60之间，可填写小数。');
-    const unit=config._rollUnits||rollUnits(config);
-    let calls=0,best=null;
+  function effectiveKeys(config,scope='solo',budget=30,panel=null) {
     const pool=Object.keys(ROLLS);
-    const initialCtx=prepare(config,scope),initial=initialCtx.evaluate({});
+    const initialCtx=prepare(config,scope,panel),initial=initialCtx.evaluate({});
     const probe=Object.fromEntries(pool.map(k=>[k,Math.min(Math.max(10,budget),capacity(config.mains,k,config))]));
-    const active=pool.filter(k=>initialCtx.evaluate({[k]:Math.max(10,capacity(config.mains,k,config))})>initial*(1+1e-10)||initialCtx.evaluate(probe)>initialCtx.evaluate({...probe,[k]:0})*(1+1e-10)),effectiveKeys=active.slice();
+    return pool.filter(k=>initialCtx.evaluate({[k]:Math.max(10,capacity(config.mains,k,config))})>initial*(1+1e-10)||initialCtx.evaluate(probe)>initialCtx.evaluate({...probe,[k]:0})*(1+1e-10));
+  }
+  async function optimize(config,scope='solo',onProgress=()=>{},options={}) {
+    const budget=num(config.budget);if(budget<0||budget>60)throw new Error('有效等效副词条总数需在0–60之间，可填写小数。');
+    const unit=config._rollUnits||rollUnits(config),panel=options.panel||null;
+    let calls=0,best=null;
+    const initialCtx=prepare(config,scope,panel),initial=initialCtx.evaluate({});
+    const active=(options.active||effectiveKeys(config,scope,budget,panel)).slice(),effective=active.slice();
     const merged={};
     for(const [pct,flat]of [['atkPct','atkPlus'],['hpPct','hpPlus'],['defPct','defPlus']])if(active.includes(pct)&&active.includes(flat)){
       const a=initialCtx.evaluate({[pct]:10}),b=initialCtx.evaluate({[flat]:10});
@@ -840,7 +844,7 @@
     const mainCandidates=config.autoMains?generateMainCandidates(config,active):[config.mains];
     const yieldFrame=()=>new Promise(r=>setTimeout(r,0));
     for(let m=0;m<mainCandidates.length;m++) {
-      const mains=mainCandidates[m],ctx=prepare(config,scope,null,mains),caps=Object.fromEntries(active.map(k=>[k,capacity(mains,k,config)+(merged[k]?capacity(mains,merged[k],config):0)]));
+      const mains=mainCandidates[m],ctx=prepare(config,scope,panel,mains),caps=Object.fromEntries(active.map(k=>[k,capacity(mains,k,config)+(merged[k]?capacity(mains,merged[k],config):0)]));
       const checkER=num(config.minRecharge?.[scope],100)>100;
       const expanded=a=>{const out={...a};for(const [pct,flat]of Object.entries(merged)){const n=a[pct]||0,max=capacity(mains,pct,config);out[pct]=Math.min(n,max);if(n>max)out[flat]=n-max;}return out;};
       const evaluate=a=>{calls++;if(global.GArtifact&&!global.GArtifact.checkBounds(config,expanded(a),mains,scope).ok)return -Infinity;if(!checkER)return ctx.evaluate(a);const res=ctx.evaluate(a,true);if(num(res.panel.recharge)<num(config.minRecharge?.[scope],100)-1e-8)return -Infinity;return res.total;};
@@ -895,14 +899,18 @@
       if(local&&(!best||local.value>best.value))best={...local,mains:{...mains}};
       if(m%2===0){onProgress((m+1)/mainCandidates.length);await yieldFrame();}
     }
+    if(best)for(const [pct,flat]of Object.entries(merged)){const n=best.allocation[pct]||0,max=capacity(best.mains,pct,config);best.allocation[pct]=Math.min(n,max);if(n>max)best.allocation[flat]=n-max;}
+    if(options.seed&&(!global.GArtifact||global.GArtifact.checkBounds(config,options.seed,config.mains,scope).ok)){
+      const value=prepare(config,scope,panel).evaluate(options.seed);
+      if(!best||value>best.value)best={allocation:{...options.seed},value,mains:{...config.mains}};
+    }
     if(!best)throw new Error('当前有效预算、五件副词条数量限制与额外保留充能无法同时满足。请核对预算、主属性、初始词条数和保留充能。');
-    for(const [pct,flat]of Object.entries(merged)){const n=best.allocation[pct]||0,max=capacity(best.mains,pct,config);best.allocation[pct]=Math.min(n,max);if(n>max)best.allocation[flat]=n-max;}
-    const ctx=prepare(config,scope,null,best.mains),ret=ctx.evaluate(best.allocation,true);
+    const ctx=prepare(config,scope,panel,best.mains),ret=ctx.evaluate(best.allocation,true);
     const placement=config.normalizedBudget===false?(best.placement||distributeRolls(best.allocation,best.mains).witness):null;
     const costs=rollCosts(config);
     const marg=Object.keys(unit).map(key=>{const after=ctx.evaluate({...best.allocation,[key]:(best.allocation[key]||0)+1}),rawAfter=ctx.evaluate({...best.allocation,[key]:(best.allocation[key]||0)+costs[key]});return {key,name:LABELS[key],increment:unit[key],rawCost:costs[key],rawIncrement:rollUnits(config,false)[key],rawRate:(rawAfter/ret.total-1)*100,rate:(after/ret.total-1)*100};}).sort((a,b)=>b.rate-a.rate);
-    const material=global.GArtifact?.recommend(config,scope,best.allocation,effectiveKeys,best.mains);
-    if(scope==='team'&&global.GTeam){ret.teamAudit=global.GTeam.audit(config,ret,best.allocation,null,best.mains);if(material&&!material.error)material.teamAudit=global.GTeam.audit(config,material,material.effectiveAll||material.allocation,null,best.mains);}
+    const material=options.material===false?undefined:global.GArtifact?.recommend(config,scope,best.allocation,effective,best.mains);
+    if(scope==='team'&&global.GTeam){ret.teamAudit=global.GTeam.audit(config,ret,best.allocation,panel,best.mains);if(material&&!material.error)material.teamAudit=global.GTeam.audit(config,material,material.effectiveAll||material.allocation,panel,best.mains);}
     return {...best,...ret,placement,active,calls,material,method:'多起点连续分配搜索，包含五件总数和共同强化的必要约束；未宣称严格全局最优',mainCandidates:mainCandidates.length,marginal:marg};
   }
   function generateMainCandidates(config,active) {
@@ -923,7 +931,7 @@
   // Seed every main-stat key before accumulation, including all seven elemental goblets.
   function artifactMainStats(mains){const stats=Object.fromEntries([...Object.keys(ROLLS),...Object.keys(MAIN)].map(k=>[k,0]));stats.hpPlus=4780;stats.atkPlus=311;for(const k of Object.values(mains||{}))if(MAIN[k])stats[k]+=MAIN[k];return stats;}
   global.GEngine={ELEMENT,WEAPON,ROLLS,MAX_ROLLS,MAIN,LABELS,TRANSFORM,SPECIAL,character,getStats,getWeapon,talentFor,calc,Stat,defaultConfig,defaultRotation,outOfCombatPanel,resolveDetail,rollUnits,rollCosts,
-    selfBuffs,buffList,weaponBuffs,artifactBuffs,createAttr,add,buffAllowed,isDamageDetail,isTeamBuff,constellationAllows,paramsFor,prepare,optimize,marginal,resistance,levelMultiplier,specialFactor,specialUncrit,indirectExpected,distributeRolls,capacity,panelValues,artifactMainStats,stateFields,STATE_FIELDS,hasFlatBuffs:config=>global.GTeam?.hasFlatBuffs(config)||global.GCharacterFixes?.hasFlat(config)||config.weapon==='裁叶萃光'||config.sets?.some(s=>s.name==='昔时之歌'&&s.count>=4)};
+    selfBuffs,buffList,weaponBuffs,artifactBuffs,createAttr,add,buffAllowed,isDamageDetail,isTeamBuff,constellationAllows,paramsFor,prepare,optimize,effectiveKeys,marginal,resistance,levelMultiplier,specialFactor,specialUncrit,indirectExpected,distributeRolls,capacity,panelValues,artifactMainStats,stateFields,STATE_FIELDS,hasFlatBuffs:config=>global.GTeam?.hasFlatBuffs(config)||global.GCharacterFixes?.hasFlat(config)||config.weapon==='裁叶萃光'||config.sets?.some(s=>s.name==='昔时之歌'&&s.count>=4)};
   if(typeof module!=='undefined')module.exports=global.GEngine;
   if(typeof require==='function'&&!global.GResident)require('./resident-panel.js');
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -1,15 +1,15 @@
 {
-  "sourceCommit": "142338b612cab8bcce2a40d23357bbf5d64e8a7c",
+  "sourceCommit": "ccef54c6df2b0677b4b6cb2ac86e410d599e7baf",
   "files": [
     {
       "path": "app.js",
-      "bytes": 109142,
-      "sha256": "18d0d6557e0b637616cd30e2005e626c6ee0abcbdb5455fa0ca8845283d55709"
+      "bytes": 112806,
+      "sha256": "387cc65cf89c5f176511780f5a523da6fbe80ad66cf0bebef79f1c52ad5617b2"
     },
     {
       "path": "appearance.css",
-      "bytes": 5817,
-      "sha256": "598ac14c79688ee7363a0b9b533a381a4eb763535e8e81a3ca6407d8940817be"
+      "bytes": 6728,
+      "sha256": "1ac663dbff540ca0536265ba5ac83e856e6fe9fdeae17de3db6088d27bf634bc"
     },
     {
       "path": "appearance.js",
@@ -33,13 +33,13 @@
     },
     {
       "path": "engine.js",
-      "bytes": 98940,
-      "sha256": "156458e76a3a7307dff84084bbf2a79c3eca1fb3d3a8b866f1754d9fe5c45692"
+      "bytes": 99570,
+      "sha256": "7fda3453defe4038eb44f20644b31b76888326a9d87e194ef2f5d57c7523ce22"
     },
     {
       "path": "index.html",
-      "bytes": 1720,
-      "sha256": "6d520a5c5ff6bdb4cd97c8099c3b981a220ed24775b06fe5ece206988202f188"
+      "bytes": 1800,
+      "sha256": "c6f4a65e6b40a74fa7aa02f9550cb6e6b8161e34f2b86ffbb9bf4c5403994763"
     },
     {
       "path": "mechanisms.js",
@@ -77,6 +77,11 @@
       "sha256": "a692c8b213530ef820a8ce5967a823de98bb6caf21945f2ae49cddb230e8eb09"
     },
     {
+      "path": "substat-score.js",
+      "bytes": 2844,
+      "sha256": "f2133f78d09b96d277a28e3433985625251f45b6e105eb0350e28e62b44543d3"
+    },
+    {
       "path": "support-panels.js",
       "bytes": 23201,
       "sha256": "97c182d2843e852b16cb0a2cbcc549d555f100dddcd4eb89070a0f5ff2145dd8"
@@ -93,8 +98,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14887472,
-      "sha256": "5129eb7df89edcb7e9685f67005d596556023d0f2b2990cd431e4adaa961af27"
+      "bytes": 14891109,
+      "sha256": "55ca15460ca60722dc63fedb748a8cf1303bebb96ee2605eac9f2a2ce73425e9"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
@@ -103,8 +108,8 @@
     },
     {
       "path": "USER_GUIDE.html",
-      "bytes": 30760,
-      "sha256": "ac899b37bd0ad8130c8c51e2f63255bebc860fbc79fb8feafbfe39de814177d6"
+      "bytes": 31894,
+      "sha256": "dd7112dc9ec0fa1be1cbe4a9e03f3550abba0fcd59b18e3d9f5a02e5ab790ca2"
     },
     {
       "path": "v72.js",

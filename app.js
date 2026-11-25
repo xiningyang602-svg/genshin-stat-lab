@@ -63,7 +63,7 @@
   function field(label,path,type='number',extra={}) {
     let input='';const value=Object.hasOwn(extra,'value')?extra.value:get(path)??'',id='field-'+path.replaceAll('.','-');
     if(path.startsWith('metricSettings.states.')&&M.fieldMinCons(path.split('.').at(-1))>Number(config.cons||0))return '<div class="field wide disabled-state"><label>'+esc(label)+'</label><span class="muted">未解锁，需'+M.fieldMinCons(path.split('.').at(-1))+'命；不计入计算</span></div>';
-    if(extra.options)input='<select id="'+id+'" data-path="'+esc(path)+'"'+(extra.numeric?' data-number="true"':'')+'>'+optionsHTML(extra.options,value)+'</select>';
+    if(extra.options)input='<select id="'+id+'" data-path="'+esc(path)+'"'+(extra.numeric?' data-number="true"':'')+(extra.disabled?' disabled':'')+'>'+optionsHTML(extra.options,value)+'</select>';
     else input='<input id="'+id+'" type="'+type+'" data-path="'+esc(path)+'" value="'+esc(value)+'"'+(extra.talentUplift!==undefined?' data-talent-uplift="'+extra.talentUplift+'"':'')+(type==='number'?' step="'+(extra.step||'any')+'"':'')+(extra.min!==undefined?' min="'+extra.min+'"':'')+(extra.max!==undefined?' max="'+extra.max+'"':'')+(extra.placeholder?' placeholder="'+esc(extra.placeholder)+'"':'')+'>';
     return '<div class="field'+(extra.wide?' wide':'')+'"><label for="'+id+'">'+esc(label)+'</label>'+input+(extra.help?'<p class="help">'+esc(extra.help)+'</p>':'')+'</div>';
   }
@@ -123,8 +123,10 @@
       '<div class="divider"></div>'+talentFields()+'<p class="help">显示命座与当前队伍加级后的实际等级，修改命座会自动更新。内部保留培养等级，避免重复加级；单人、组队资格不同时，各项计算依据分别列明实际等级。</p>',{tag:'01 / CHARACTER'});
   }
   function artifactsCard() {
+    const draftMains=ocr.draft?Object.fromEntries(['sands','goblet','circlet'].map((slot,i)=>[slot,ocr.draft.pieces[i+2]?.main.key||''])):null;
     return card('五件圣遗物','<div class="stat-pills"><span class="stat-pill">生之花 · 生命值 +4,780</span><span class="stat-pill">死之羽 · 攻击力 +311</span></div>'+
-      '<div class="fields">'+Object.keys(mainOptions).map(slot=>field(({sands:'时之沙主属性',goblet:'空之杯主属性',circlet:'理之冠主属性'})[slot],'mains.'+slot,'text',{wide:slot==='circlet',options:[['','请选择主属性'],...mainOptions[slot].map(k=>[k,E.LABELS[k]+' +'+E.MAIN[k]+(k==='mastery'?'':'%')])]})).join('')+'</div>'+
+      (draftMains?'<p class="help ocr-main-status">已从截图读取主属性；采用截图时自动保存。需修正时在识别结果中修改。</p>':'')+
+      '<div class="fields">'+Object.keys(mainOptions).map(slot=>field(({sands:'时之沙主属性',goblet:'空之杯主属性',circlet:'理之冠主属性'})[slot],'mains.'+slot,'text',{wide:slot==='circlet',disabled:!!draftMains,value:draftMains?draftMains[slot]:config.mains[slot],options:[['',draftMains?'待核对主属性':'请选择主属性'],...mainOptions[slot].map(k=>[k,E.LABELS[k]+' +'+E.MAIN[k]+(k==='mastery'?'':'%')])]})).join('')+'</div>'+
       '<div class="divider"></div><div class="fields">'+field('套装效果','setChoice','text',{wide:true,options:Guides.artifactOptions(config.character)})+
       (config.setChoice==='two'?['0','1'].map(i=>field('两件套 '+(Number(i)+1),'sets.'+i+'.name','text',{wide:true,options:[['','请选择两件套'],...D.artifacts.filter(a=>a.maxRarity===5).map(a=>[a.name,a.name])]})).join(''):'')+'</div>',{tag:'02 / ARTIFACTS'});
   }
@@ -344,6 +346,21 @@
       return '<details class="method-details"><summary>'+({solo:'单人',team:'组队'})[scope]+' · 技能分项与伤害乘区</summary>'+critPanel(v)+v.details.map(d=>'<details class="trace-row"><summary><span>'+esc(d.title)+' × '+fmt(d.count,2)+'</span><span class="num">'+fmt(d.total)+'</span></summary><div class="table-wrap"><table><thead><tr><th>伤害类型</th><th>基础伤害</th><th>精通</th><th>计算暴击率</th><th>计算暴伤</th><th>防御乘区</th><th>抗性乘区</th></tr></thead><tbody>'+d.calls.map(c=>'<tr><td>'+esc(c.rx)+'</td><td>'+fmt(c.base,2)+'</td><td>'+fmt(c.em,1)+'</td><td>'+fmt(c.cr,1)+'%</td><td>'+fmt(c.cd,1)+'%</td><td>'+(c.kind==='direct'||c.kind==='indirect'||c.kind==='transformative'?'不适用':fmt(c.def,4))+'</td><td>'+fmt(c.res,4)+'</td></tr>').join('')+'</tbody></table></div><div class="call-formulas">'+d.calls.map(callFormula).join('')+'</div><p class="help">实际天赋：普攻 '+esc(d.talentLevels?.a??'—')+' / 战技 '+esc(d.talentLevels?.e??'—')+' / 爆发 '+esc(d.talentLevels?.q??'—')+'</p><p class="help">实际技能参数</p><pre>'+esc(JSON.stringify(d.params,null,2))+'</pre><details><summary>查看角色公式函数</summary><pre>'+esc(d.source)+'</pre></details></details>').join('')+'<p class="help">已应用的自身/武器/套装增益</p><ul>'+v.buffs.map(b=>'<li>'+esc(b)+'</li>').join('')+'</ul></details>';
     }).join('')+'<details class="method-details"><summary>模型、词条折算与搜索边界</summary><p>花与羽毛固定，沙杯冠按输入选择。优化按有效等效副词条预算进行；每次改属性会重新计算所有自身转化和封顶。</p><p>每个伤害指标使用固定的攻击分支和命中段数。期望伤害用于优化，暴击栏为所有可暴击段均暴击时的总值。反应现场与装备预设会列明；未模拟产球、动作耗时、走位或敌人时序。</p><p>搜索使用多起点优化和属性之间的分配扫描。结果称为“搜索最优”，不能把数值搜索当成已证明的严格全局最优。实际五件圣遗物还有副词条种类与强化限制，等效分配主要用于判断属性方向。</p></details>',{detail:true});
   }
+  function substatScoreCard(data) {
+    const blocks=Object.entries(data).map(([scope,result])=>{
+      const score=result.substatScore,name=scope==='solo'?'单人':'组队';
+      if(!score)return '';
+      const count=Number.isFinite(score.count)?'<p class="roll-count-line">有效副词条 <strong class="num">'+(score.estimated?'约 ':'')+fmt(score.count,2)+'</strong> 条</p>':'';
+      if(score.error)return '<section class="roll-score"><h4>'+name+'</h4>'+count+'<p class="help">'+esc(score.error)+'</p></section>';
+      const rows=score.active.filter(key=>(score.allocation[key]||score.optimum.allocation[key]||0)>0).map(key=>
+        '<tr><th scope="row">'+esc(E.LABELS[key])+'</th><td>'+fmt(score.allocation[key]||0,2)+'</td><td>'+fmt(score.optimum.allocation[key]||0,2)+'</td></tr>').join('');
+      return '<section class="roll-score" data-score-scope="'+scope+'"><h4>'+name+'</h4>'+count+
+        '<p class="roll-score-percent"><strong class="num">'+fmt(score.percentage,2)+'%</strong><span>达到同词条数最优参考</span></p>'+
+        '<p class="roll-score-damage">最优参考期望伤害 <strong class="num">'+fmt(score.optimum.total)+'</strong></p>'+
+        '<details class="method-details"><summary>查看当前与最优分配</summary><table class="data-table roll-score-table"><thead><tr><th>副属性</th><th>当前条数</th><th>最优条数</th></tr></thead><tbody>'+rows+'</tbody></table></details></section>';
+    }).join('');
+    return blocks?card('有效词条数与分配完成度','<div class="roll-score-grid">'+blocks+'</div><p class="help">占比按当前期望伤害 ÷ 同等效词条数的连续搜索最优值计算，固定当前主属性、武器、套装及增益。先扣主属性，小数值按90级基数折算；仅满足循环的充能不占预算。常驻面板输入为估算。</p>').replace('class="card"','class="card substat-score-card"'):'';
+  }
   function resultContent(mode) {
     let data=results[mode]?.[goal];
     if(!data)return emptyResult(mode);
@@ -357,7 +374,7 @@
       const target=[...(complete.team||complete.solo).changes].sort((a,b)=>b.rawRate-a.rawRate)[0];
       result='<div class="recommendation"><strong>当前更值得强化：'+esc(target?.name||'当前无可提升属性')+' · '+pct(target?.rawRate||0)+'</strong><p>针对'+(complete.team?'组队':'单人')+'与'+(activeMetric()?.title||'所选指标')+'目标，追加一次平均强化的收益最高。切换目标后排名可能变化。</p></div>'+teamReport(complete.team)+gainTable(complete)+traceCard(complete,false);
     }
-    if(mode==='marginal')result='<div class="result-grid">'+Object.entries(complete).map(([s,r])=>resultSummary(s,{...r.base,mains:r.inputMains})).join('')+'</div>'+result;
+    if(mode==='marginal')result='<div class="result-grid">'+Object.entries(complete).map(([s,r])=>resultSummary(s,{...r.base,mains:r.inputMains})).join('')+'</div>'+substatScoreCard(complete)+result;
     for(const [scope,r]of Object.entries(data))if(r.error)result+='<div class="error">'+({solo:'单人',team:'组队'})[scope]+'：'+esc(r.error)+'</div>';
     return result;
   }
@@ -472,7 +489,16 @@
         await new Promise(r=>setTimeout(r,0));
       } else {
         try{results[mode][g]=E.marginal(M.configFor(snapshot,metric),snapshot.panel);if(!snapshot.teammates?.some(t=>t.character))results[mode][g].team={error:'选择队友后可同时计算组队收益。'};}catch(e){results[mode][g]={solo:{error:e.message},team:{error:e.message}};}
-        task+=2;progress=100*task/tasks;await new Promise(r=>setTimeout(r,0));
+        for(const scope of ['solo','team']){
+          const current=results[mode][g][scope];
+          if(!current.error)try{
+            current.substatScore=await window.GSubstatScore.compare(M.configFor(snapshot,metric),scope,current.base,p=>{
+              progress=100*(task+p)/tasks;
+              const bar=root.querySelector('.progress div');if(bar)bar.style.width=progress+'%';
+            });
+          }catch(e){current.substatScore={error:e.message};}
+          task++;progress=100*task/tasks;await new Promise(r=>setTimeout(r,0));
+        }
       }
     }
     if(config.character!==snapshot.character)results[mode]={};busy=false;dirty=JSON.stringify(snapshot)!==JSON.stringify(config);render();if(window.matchMedia('(max-width: 1000px)').matches)root.querySelector('.results')?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -514,7 +540,7 @@
     const el=event.target;
     if(el.id==='artifact-image'&&el.files[0]){recognizeScreenshot(el.files[0]);return;}
     if(el.hasAttribute('data-ocr-confirm')){ocr.confirmed=el.checked;const b=root.querySelector('.ocr-apply');if(b)b.disabled=!ocr.confirmed;pendingOcrUi();return;}
-    if(el.dataset.ocrPath){set(el.dataset.ocrPath,/configuration\.(cons|refine)$|\.value$/.test(el.dataset.ocrPath)&&el.value!==''?Number(el.value):el.value,ocr.draft);ocr.confirmed=false;const b=root.querySelector('.ocr-apply');if(b)b.disabled=true;const check=root.querySelector('[data-ocr-confirm]');if(check)check.checked=false;pendingOcrUi();return;}
+    if(el.dataset.ocrPath){set(el.dataset.ocrPath,/configuration\.(cons|refine)$|\.value$/.test(el.dataset.ocrPath)&&el.value!==''?Number(el.value):el.value,ocr.draft);ocr.confirmed=false;const b=root.querySelector('.ocr-apply');if(b)b.disabled=true;const check=root.querySelector('[data-ocr-confirm]');if(check)check.checked=false;if(/pieces\.\d\.main\.key$/.test(el.dataset.ocrPath))render();else pendingOcrUi();return;}
     if(el.dataset.metricId){const ids=new Set(M.selected(config).map(m=>m.id));el.checked?ids.add(el.dataset.metricId):ids.delete(el.dataset.metricId);config.metricIds=[...ids];markDirty();render();return;}
     if(el.dataset.listPath){const values=new Set(get(el.dataset.listPath)||[]);el.checked?values.add(el.dataset.listValue):values.delete(el.dataset.listValue);set(el.dataset.listPath,[...values]);markDirty();return;}
     if(el.dataset.path) {
@@ -584,6 +610,14 @@
             for(const [k,v]of Object.entries(r.allocation))rows.push([label,name,'连续分配',E.LABELS[k],v,'','',r.total,r.critical,r.method]);
             const m=r.material;if(m?.error)rows.push([label,name,'五件方案','','','','','','',m.error]);
             else if(m){for(const [k,v]of Object.entries(m.allocation))rows.push([label,name,'五件方案',E.LABELS[k],v,'','',m.total,m.critical,m.budgetLeft]);for(const p of m.placement||[])for(const [k,values]of Object.entries(p.tiers))rows.push([label,name,'逐件四档',p.name+' / '+E.LABELS[k],values.join(' + '),'','',m.total,m.critical,'起始'+p.initial+'条；第一份为初值']);}
+          }
+          if(tab==='marginal'&&r.substatScore){
+            const score=r.substatScore;
+            rows.push([label,name,'有效副词条数','等效词条',score.count,'','',r.base.total,r.base.critical,score.error||'固定当前主属性，副属性按五星平均值折算']);
+            if(!score.error){
+              rows.push([label,name,'同词条数最优占比','%',score.percentage,'','',score.optimum.total,score.optimum.critical,score.method]);
+              for(const key of score.active)rows.push([label,name,'当前/最优词条',E.LABELS[key],score.allocation[key]||0,'','',score.optimum.total,score.optimum.critical,'最优 '+(score.optimum.allocation[key]||0)]);
+            }
           }
           for(const e of window.GTeam.report(r.teamAudit||r.base?.teamAudit).records)rows.push([label,name,e.displayStatus==='used'?'本次实际采用增益':'覆盖或限制说明',e.owner+' / '+e.source+' / '+window.GTeam.effectLabel(e.key),e.value,'','',r.total??r.base?.total,r.critical??r.base?.critical,(e.displayStatus==='used'?e.usedTargets:e.targets).join('、')+(e.count?'；实际'+e.count+'次':'')+(e.reason?'；'+e.reason:'')]);
           for(const t of (r.teamAudit||r.base?.teamAudit)?.snapshots||[]){const p=t.panelDetails;if(!p)continue;for(const key of p.required||[]){rows.push([label,name,'辅助常驻面板',t.owner+' / '+key,p.resident[key],'','',r.total??r.base?.total,r.critical??r.base?.critical,'命中时总值 '+p.total[key]]);for(const read of (p.reads||[]).filter(x=>x.key===key))rows.push([label,name,'辅助转化采用值',t.owner+' / '+key+' / '+read.consumer,read.value,'','',r.total??r.base?.total,r.critical??r.base?.critical,p.timing]);}const sourceId=e=>JSON.stringify([e.id,e.stat,e.points]),current=new Set((p.sources||[]).map(sourceId));for(const [phase,list] of [['辅助属性来源',p.sources],['施放取样专属来源',p.castSources],['武器刷新专属来源',p.refreshSources]])for(const e of list||[])if((p.required||[]).includes(e.stat)&&(phase==='辅助属性来源'||!current.has(sourceId(e))))rows.push([label,name,phase,t.owner+' / '+e.source+' / '+e.stat,e.points,'','',r.total??r.base?.total,r.critical??r.base?.critical,e.policy]);}
