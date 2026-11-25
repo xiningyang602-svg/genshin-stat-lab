@@ -841,7 +841,8 @@
       if(Math.abs(a-b)<Math.max(1,initial)*1e-10){merged[pct]=flat;active.splice(active.indexOf(flat),1);}
     }
     if(!active.length&&budget>0)throw new Error('当前目标没有能继续提升伤害的有效副词条，请检查输出技能或属性封顶。');
-    const mainCandidates=config.autoMains?generateMainCandidates(config,active):[config.mains];
+    const mainCandidates=options.mainCandidates|| (config.autoMains?generateMainCandidates(config,active):[config.mains]);
+    if(!mainCandidates.length)throw new Error('没有可用于比较的主属性组合。');
     const yieldFrame=()=>new Promise(r=>setTimeout(r,0));
     for(let m=0;m<mainCandidates.length;m++) {
       const mains=mainCandidates[m],ctx=prepare(config,scope,panel,mains),caps=Object.fromEntries(active.map(k=>[k,capacity(mains,k,config)+(merged[k]?capacity(mains,merged[k],config):0)]));
@@ -866,7 +867,7 @@
       let local=null;
       for(const start of starts) {
         let a={...start},value=score(a);
-        for(let iteration=0;iteration<(mainCandidates.length>1?5:12);iteration++) {
+        for(let iteration=0;iteration<(options.iterations??(mainCandidates.length>1?5:12));iteration++) {
           let improved=false;
           for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++) {
             const x=active[i],y=active[j],sum=a[x]+a[y];let chosen=a[x],next=value;

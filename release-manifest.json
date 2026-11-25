@@ -1,10 +1,10 @@
 {
-  "sourceCommit": "ccef54c6df2b0677b4b6cb2ac86e410d599e7baf",
+  "sourceCommit": "cd85744dee74a34ace6ccba34fead2b82ecf75b1",
   "files": [
     {
       "path": "app.js",
-      "bytes": 112806,
-      "sha256": "387cc65cf89c5f176511780f5a523da6fbe80ad66cf0bebef79f1c52ad5617b2"
+      "bytes": 122056,
+      "sha256": "8c75a63f81fa978ea47ac01198c9d16df90397936c53a5cc7b374a95d7c86903"
     },
     {
       "path": "appearance.css",
@@ -33,13 +33,13 @@
     },
     {
       "path": "engine.js",
-      "bytes": 99570,
-      "sha256": "7fda3453defe4038eb44f20644b31b76888326a9d87e194ef2f5d57c7523ce22"
+      "bytes": 99713,
+      "sha256": "01fc33c9fbd40f53d701b9788a2e4170d4e33e9e27dc5463fce0d5c4e31b509f"
     },
     {
       "path": "index.html",
-      "bytes": 1800,
-      "sha256": "c6f4a65e6b40a74fa7aa02f9550cb6e6b8161e34f2b86ffbb9bf4c5403994763"
+      "bytes": 1950,
+      "sha256": "1c7d597a58e0becd401daa0d5919c1ca6d80c91ca0746f8c4a4856485604b70d"
     },
     {
       "path": "mechanisms.js",
@@ -98,8 +98,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14891109,
-      "sha256": "55ca15460ca60722dc63fedb748a8cf1303bebb96ee2605eac9f2a2ce73425e9"
+      "bytes": 14898455,
+      "sha256": "ffd23aaeabe0f4c855eac1be5b63f7aa476fc5f4c020cb5b0719d672f3f64c2a"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
@@ -108,8 +108,8 @@
     },
     {
       "path": "USER_GUIDE.html",
-      "bytes": 31894,
-      "sha256": "dd7112dc9ec0fa1be1cbe4a9e03f3550abba0fcd59b18e3d9f5a02e5ab790ca2"
+      "bytes": 32901,
+      "sha256": "4a2003e6b99cfa64b848c1b371c4c3df120b51d62399776093bd56287bc8b529"
     },
     {
       "path": "v72.js",
@@ -195,6 +195,16 @@
       "path": "vendor/ocr/worker.min.js.LICENSE.txt",
       "bytes": 466,
       "sha256": "45f54171aeaa1d10c0c1a66f374b7bba1f02472b1487fbe892eec04f840002ac"
+    },
+    {
+      "path": "weapon-comparison.css",
+      "bytes": 8570,
+      "sha256": "0543547559f5709a5aa085f8452e115a04eb743ea640f8b2e8331408b076fb64"
+    },
+    {
+      "path": "weapon-comparison.js",
+      "bytes": 6440,
+      "sha256": "a213109bbee7668d33f5f498a1b5b611e05a47d2ef24323683e9bb46c4e266c4"
     }
   ]
 }

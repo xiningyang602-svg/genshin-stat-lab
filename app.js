@@ -1,12 +1,14 @@
 (function(){
   'use strict';
-  const E=window.GEngine,D=window.GDATA,R=window.GRULES,Guides=window.GRecommendations,M=window.GMetrics;
+  const E=window.GEngine,D=window.GDATA,R=window.GRULES,Guides=window.GRecommendations,M=window.GMetrics,W=window.GWeaponComparison;
   const root=document.getElementById('app'),storageKey='teyvat-stat-lab-v7';
   const openedCards=new Map();
   const invalidInputs=new Map();
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=o=>JSON.parse(JSON.stringify(o));
-  let config=E.defaultConfig('那维莱特'),tab='optimize',goal='',results={optimize:{},marginal:{}},dirty=false,busy=false,error='',progress=0;
+  let config=E.defaultConfig('那维莱特'),tab='optimize',goal='',results={optimize:{},marginal:{},weapons:null},dirty=false,busy=false,error='',progress=0;
+  let weaponController=null,comparisonAudit=0;
+  const resultSnapshots={optimize:'',marginal:'',weapons:''};
   const ocr={busy:false,progress:0,message:'',draft:null,error:'',confirmed:false,controller:null,editTotals:false};
   let ocrDragDepth=0;
   config.panelMode='character';
@@ -87,7 +89,7 @@
     return '<label class="check-row'+(unavailable?' disabled-state':'')+'"><input type="checkbox" data-path="'+path+'"'+(!unavailable&&(preset||value)?' checked':'')+(preset||unavailable?' disabled':'')+'>'+esc(label)+(unavailable?'（未解锁，需'+need+'命；不计入）':preset?'（满效果预设）':'')+'</label>';
   }
   function elementChecks(label,path){const selected=get(path)||[];return '<fieldset class="element-picker"><legend>'+esc(label)+'</legend>'+['pyro','hydro','cryo','electro','anemo','geo','dendro'].map(k=>'<label><input type="checkbox" data-list-path="'+esc(path)+'" data-list-value="'+k+'"'+(selected.includes(k)?' checked':'')+'>'+E.ELEMENT[k]+'</label>').join('')+'</fieldset>';}
-  function card(title,body,{detail=false,open=false,tag='',stateKey=title}={}){const expanded=openedCards.get(stateKey)??open;return detail?'<details class="card details-card" data-card-title="'+esc(stateKey)+'"'+(expanded?' open':'')+'><summary>'+esc(title)+'</summary><div class="card-body">'+body+'</div></details>':'<section class="card"><div class="card-head"><h3>'+esc(title)+'</h3>'+(tag?'<span class="section-tag">'+esc(tag)+'</span>':'')+'</div><div class="card-body">'+body+'</div></section>';}
+  function card(title,body,{detail=false,open=false,tag='',stateKey=title}={}){if(tab==='weapons')stateKey='weapons:'+stateKey;const expanded=openedCards.get(stateKey)??(tab==='weapons'&&title==='指标条件与装备效果'?false:open);return detail?'<details class="card details-card" data-card-title="'+esc(stateKey)+'"'+(expanded?' open':'')+'><summary>'+esc(title)+'</summary><div class="card-body">'+body+'</div></details>':'<section class="card"><div class="card-head"><h3>'+esc(title)+'</h3></div><div class="card-body">'+body+'</div></section>';}
   const mainOptions={sands:['atkPct','hpPct','defPct','mastery','recharge'],goblet:['dmg',...['pyro','hydro','cryo','electro','anemo','geo','dendro'].map(k=>'dmg_'+k),'phy','atkPct','hpPct','defPct','mastery'],circlet:['cpct','cdmg','atkPct','hpPct','defPct','mastery','heal']};
   function skillOptions(selected) {
     let html=R[config.character].details.map((d,index)=>({d:E.resolveDetail(config,index),index})).filter(({d})=>E.isDamageDetail(d)).map(({d,index})=>option(index,(d.cons?'C'+d.cons+' · ':'')+d.title,selected)).join('');
@@ -120,7 +122,7 @@
       '<div class="divider"></div><div class="fields">'+field('武器（90级）','weapon','text',{wide:true,options:Guides.weaponOptions(c.key,{custom:true})})+
       field('武器精炼','refine','number',{numeric:true,options:[1,2,3,4,5].map(n=>[n,'精炼'+n])})+'<div class="field"><label>一个词条的单位</label><span class="stat-pill">五星四档平均 · 暴率 3.305%</span></div></div>'+
       (config.weapon==='custom'?'<div class="divider"></div><div class="fields">'+field('武器基础攻击','customWeapon.base')+field('武器副属性','customWeapon.bonusKey','text',{options:[['none','无'],...Object.keys(E.ROLLS).filter(k=>!k.endsWith('Plus')).map(k=>[k,E.LABELS[k]])]})+field('副属性数值','customWeapon.bonus')+'</div>':D.weapons.find(w=>w.name===config.weapon)?.maxLevel===70?'<p class="help">这把低星武器最高70级，按实际满级数值计算。</p>':'')+
-      '<div class="divider"></div>'+talentFields()+'<p class="help">显示命座与当前队伍加级后的实际等级，修改命座会自动更新。内部保留培养等级，避免重复加级；单人、组队资格不同时，各项计算依据分别列明实际等级。</p>',{tag:'01 / CHARACTER'});
+      '<div class="divider"></div>'+talentFields()+'<p class="help">显示实际天赋等级，命座和队伍加级自动计入。</p>',{tag:'01 / CHARACTER'});
   }
   function artifactsCard() {
     const draftMains=ocr.draft?Object.fromEntries(['sands','goblet','circlet'].map((slot,i)=>[slot,ocr.draft.pieces[i+2]?.main.key||''])):null;
@@ -135,13 +137,13 @@
       rollConversionInfo(),{tag:'03 / SUBSTATS'});
   }
   function rollConversionInfo(){try{const costs=E.rollCosts(config);return '<details class="method-details"><summary>平均词条单位与小词条折算</summary><p>攻击/生命 '+E.ROLLS.atkPct+'%；防御 '+E.ROLLS.defPct+'%；暴率 '+E.ROLLS.cpct+'%；暴伤 '+E.ROLLS.cdmg+'%；精通 '+E.ROLLS.mastery+'；充能 '+E.ROLLS.recharge+'%。</p><p>小攻击平均'+E.ROLLS.atkPlus+'点 = '+fmt(costs.atkPlus,4)+'条大攻击；小生命平均'+E.ROLLS.hpPlus+'点 = '+fmt(costs.hpPlus,4)+'条大生命；小防御平均'+E.ROLLS.defPlus+'点 = '+fmt(costs.defPlus,4)+'条大防御。</p><p>攻击基数是90级角色 + 所选武器基础攻击；生命与防御基数为90级角色本体。花和羽毛主属性不计入副词条预算。</p></details>';}catch{return '<p class="help">选择武器后显示小词条折算值。</p>';}}
-  function activeMetric(){return M.selected(config).find(m=>m.id===goal)||M.selected(config)[0];}
+  function activeMetric(){return tab==='weapons'&&W?M.definition(config,W.settings(config).metricId):M.selected(config).find(m=>m.id===goal)||M.selected(config)[0];}
   function metricsCard(){
     const list=M.definitions(config),selected=new Set(M.selected(config).map(m=>m.id));
     return card('角色伤害指标','<div class="metric-choices">'+list.map(m=>'<label class="metric-choice"><input type="checkbox" data-metric-id="'+esc(m.id)+'"'+(selected.has(m.id)?' checked':'')+'><span>'+esc(m.title)+(m.reaction?'<small>'+esc(M.names[m.reaction])+'场景自动成立</small>':'')+'</span></label>').join('')+'</div>',{tag:'DAMAGE BENCHMARKS'});
   }
   function metricSettingsCard(){
-    const selected=M.selected(config),first=activeMetric()||M.definitions(config)[0],preview=first?{...config,_metric:first}:config,s=M.settings(preview),v={...M.defaultStates(preview),...M.gearStates(preview,first||{}),...s.states};
+    const selected=tab==='weapons'?[activeMetric()].filter(Boolean):M.selected(config),first=activeMetric()||M.definitions(config)[0],preview=first?{...config,_metric:first}:config,s=M.settings(preview),v={...M.defaultStates(preview),...M.gearStates(preview,first||{}),...s.states};
     let extra='';
     if(selected.some(m=>m.reaction==='stellarConduct'||m.partyReaction==='stellarConduct')||config.character==='瓦列里'&&v.valeriyFieldActive)extra+=field('极星辉域：上一周期有效附着次数','metricSettings.stellarHits','number',{min:0,max:12,step:1,wide:true,help:'默认10次，对应1.9倍；12次对应2倍。不是本周期刚清零的记录。'});
     if(config.character==='桑多涅')extra+=field('大招清除的改进战术层数','metricSettings.sandroneTactics','number',{min:0,max:10,step:1,wide:true,value:s.sandroneTactics,help:'E转化功率可积累改进战术；默认Q清除满10层，0命也可取得，相对0层倍率×2。手动修改会切换自定义。'});
@@ -159,7 +161,7 @@
   function metricOverview(mode){
     const rows=M.selected(config).filter(m=>results[mode]?.[m.id]);if(!rows.length)return '';
     const cell=(r,k)=>r?.error?'<span class="muted">条件不满足</span>':r?fmt((mode==='marginal'?r.base:r)?.[k]):'—';
-    return card(mode==='optimize'?'各指标独立最优 · 伤害对照':'当前圣遗物 · 各指标伤害','<div class="table-wrap"><table class="metric-overview"><thead><tr><th>指标</th><th>单人期望</th><th>单人暴击</th><th>组队期望</th><th>组队暴击</th></tr></thead><tbody>'+rows.map(m=>{const d=results[mode][m.id];return '<tr class="'+(goal===m.id?'selected':'')+'"><td><button data-goal="'+esc(m.id)+'">'+esc(m.title)+'</button></td><td>'+cell(d.solo,'total')+'</td><td>'+cell(d.solo,'critical')+'</td><td>'+cell(d.team,'total')+'</td><td>'+cell(d.team,'critical')+'</td></tr>';}).join('')+'</tbody></table></div><p class="help">'+(mode==='optimize'?'每行各自优化期望伤害，分配可能不同，不能把这些行合并成同一套圣遗物。':'各指标使用同一份已输入圣遗物属性。')+'暴击栏表示本指标所有可暴击伤害均暴击的总值。</p>');
+    return card(mode==='optimize'?'各指标独立最优 · 伤害对照':'当前圣遗物 · 各指标伤害','<div class="table-wrap"><table class="metric-overview"><thead><tr><th>指标</th><th>单人期望</th><th>单人暴击</th><th>组队期望</th><th>组队暴击</th></tr></thead><tbody>'+rows.map(m=>{const d=results[mode][m.id];return '<tr class="'+(goal===m.id?'selected':'')+'"><td><button data-goal="'+esc(m.id)+'">'+esc(m.title)+'</button></td><td>'+cell(d.solo,'total')+'</td><td>'+cell(d.solo,'critical')+'</td><td>'+cell(d.team,'total')+'</td><td>'+cell(d.team,'critical')+'</td></tr>';}).join('')+'</tbody></table></div><p class="help">'+(mode==='optimize'?'各指标分别优化，分配可能不同。':'各指标使用同一份已输入圣遗物属性。')+'暴击栏按可暴击段全部暴击计算。</p>');
   }
   const buffFields={...E.LABELS,aDmg:'普攻伤害加成 %',a2Dmg:'重击伤害加成 %',a3Dmg:'下落伤害加成 %',eDmg:'战技伤害加成 %',qDmg:'爆发伤害加成 %',aPlus:'普攻附加基础伤害',a2Plus:'重击附加基础伤害',a3Plus:'下落附加基础伤害',ePlus:'战技附加基础伤害',qPlus:'爆发附加基础伤害',aCpct:'普攻暴击率 %',aCdmg:'普攻暴击伤害 %',a2Cpct:'重击暴击率 %',a2Cdmg:'重击暴击伤害 %',eCpct:'战技暴击率 %',eCdmg:'战技暴击伤害 %',qCpct:'爆发暴击率 %',qCdmg:'爆发暴击伤害 %',enemyDef:'减防 %',enemyIgnore:'无视防御 %',kx:'全元素/物理减抗 %',res_pyro:'火减抗 %',res_hydro:'水减抗 %',res_cryo:'冰减抗 %',res_electro:'雷减抗 %',res_geo:'岩减抗 %',res_anemo:'风减抗 %',res_dendro:'草减抗 %',res_physical:'物理减抗 %',multi:'独立倍率加成 %',vaporize:'蒸发反应增伤 %',melt:'融化反应增伤 %',aggravate:'超激化反应增伤 %',spread:'蔓激化反应增伤 %',bloom:'绽放反应增伤 %',hyperBloom:'超绽放反应增伤 %',burgeon:'烈绽放反应增伤 %',swirl:'扩散反应增伤 %',lunarCharged:'月感电增伤 %',lunarBloom:'月绽放增伤 %',lunarCrystallize:'月结晶增伤 %',stellarConduct:'星超导增伤 %',stellarSwirl:'星扩散增伤 %',stellarVortex:'星辉冰旋增伤 %',fypct:'月/星基础伤害提升 %',fyplus:'月/星专属固定基础伤害',elevated:'月/星擢升 %',lunarChargedBase:'月感电基础伤害提升 %',lunarBloomBase:'月绽放基础伤害提升 %',lunarCrystallizeBase:'月结晶基础伤害提升 %',stellarConductBase:'星超导基础伤害提升 %',stellarSwirlBase:'星扩散基础伤害提升 %',stellarConductFlat:'星超导专属固定增伤',stellarSwirlFlat:'星扩散专属固定增伤'};
   buffFields.dmg='通用伤害加成 %（含物理）';
@@ -234,12 +236,12 @@
       const keys=Object.keys(E.ROLLS);
       if(config.artifactInputSource==='截图识别后已核对'&&!ocr.editTotals){
         const percent=k=>k.endsWith('Pct')||['cpct','cdmg','recharge'].includes(k),rows=keys.map(k=>'<tr><th scope="row">'+esc(E.LABELS[k])+'</th><td class="num">'+Number(config.artifactPanel?.[k]||0).toLocaleString('zh-CN',{maximumFractionDigits:3})+(percent(k)?'%':'')+'</td></tr>').join('');
-        return card('已采用截图 · 五件自动合计',mode+'<p class="panel-intro applied-totals-note">识别结果已采用。下面是五件主属性与副属性的自动合计，直接用于本次计算，无需重复填写。</p><table class="ocr-applied-totals"><tbody>'+rows+'</tbody></table><p class="help">这里仅包含圣遗物原始属性；角色、武器、套装效果及属性转化由网站计算。</p><button class="add-btn" data-action="artifact-edit">需要修正时，手动修改合计</button>',{tag:'SCREENSHOT / APPLIED'});
+        return card('已采用截图 · 五件自动合计',mode+'<p class="panel-intro applied-totals-note">五件主、副属性已自动合计。</p><table class="ocr-applied-totals"><tbody>'+rows+'</tbody></table><p class="help">这里仅包含圣遗物原始属性；角色、武器、套装效果及属性转化由网站计算。</p><button class="add-btn" data-action="artifact-edit">需要修正时，手动修改合计</button>',{tag:'SCREENSHOT / APPLIED'});
       }
-      return card('手动填写五件圣遗物合计',mode+'<p class="panel-intro">仅在手动输入时填写五件主词条和副词条的总和。采用截图后会自动生成这些合计，不用再填一次。此处不包括角色本体、武器、角色被动与套装效果，它们由程序添加。花4780生命、羽311攻击也计入这里。</p><div class="fields">'+keys.map(k=>field(E.LABELS[k]+(['cpct','cdmg','recharge'].includes(k)?' %':''),'artifactPanel.'+k,'number',{min:0})).join('')+'</div><p class="help">杯的元素/物理伤害与冠的治疗加成由所选主词条确定；请确认三个主属性与实际装备一致。</p><button class="add-btn" data-action="artifact-example" style="margin-top:12px">填入只有五件主词条的示例，再修改副属性合计</button>'+rollConversionInfo(),{tag:'MANUAL TOTALS / INPUT'});
+      return card('手动填写五件圣遗物合计',mode+'<p class="panel-intro">填写五件主、副属性合计（包含花4780生命、羽311攻击），不含角色、武器和套装效果。</p><div class="fields">'+keys.map(k=>field(E.LABELS[k]+(['cpct','cdmg','recharge'].includes(k)?' %':''),'artifactPanel.'+k,'number',{min:0})).join('')+'</div><p class="help">杯的元素/物理伤害与冠的治疗加成由所选主词条确定；请确认三个主属性与实际装备一致。</p><button class="add-btn" data-action="artifact-example" style="margin-top:12px">填入只有五件主词条的示例，再修改副属性合计</button>'+rollConversionInfo(),{tag:'MANUAL TOTALS / INPUT'});
     }
     const names={hp:'生命值',atk:'攻击力',def:'防御力',mastery:'元素精通',cpct:'暴击率 %',cdmg:'暴击伤害 %',recharge:'元素充能效率 %',dmg:E.ELEMENT[E.character(config.character).element]+'元素伤害加成 %',phy:'物理伤害加成 %',heal:'治疗加成 %'};
-    return card('你的单人常驻面板',mode+'<p class="panel-intro">先选好角色、武器、命座、套装和三个主属性，再填写游戏角色详情数值：只留主C一人，等待E/Q与临时增益结束。装备常驻被动和永久转化已经包含在面板里，网站会拆分后重算，组队只补本次可用的额外增益。</p><p class="help">幻灭、黑曜、逐影、冰套等条件暴击不要加进这里。小助手的“未触发面板”可能连武器常驻被动都没加，请用上方圣遗物截图识别入口。</p><div class="fields">'+Object.entries(names).map(([k,l])=>field(l,'panel.'+k,'number',{placeholder:'填写游戏面板',min:k==='cpct'?-100:0})).join('')+field('读取面板时的生命比例 %','panelSettings.hpPct','number',{min:0,max:100,wide:true,help:'默认满生命、无护盾、远离敌人；与实战指标里的生命状态分开。'})+(config.character==='玛薇卡'&&config.cons>=2?field('五件圣遗物的攻击力%合计','panelExtra.atkPct','number',{min:0,wide:true,help:'2命在夜魂中改变白字，仅总攻击不能区分原有大攻击和小攻击；截图识别可自动提供这个值。'}):'')+'</div><button class="add-btn" data-action="example-panel" style="margin-top:12px">填入无副词条示例，再按实际修改</button><p class="help">每次追加一条后重新计算转化与封顶。面板显示存在舍入；输入截图或显示数值时，结果也受该显示精度限制。</p>',{tag:'RESIDENT PANEL / INPUT'});
+    return card('你的单人常驻面板',mode+'<p class="panel-intro">填写只留主C一人、临时增益结束后的游戏常驻面板。</p><p class="help">幻灭、黑曜、逐影、冰套等条件暴击不要加进这里。小助手的“未触发面板”可能连武器常驻被动都没加，请用上方圣遗物截图识别入口。</p><div class="fields">'+Object.entries(names).map(([k,l])=>field(l,'panel.'+k,'number',{placeholder:'填写游戏面板',min:k==='cpct'?-100:0})).join('')+field('读取面板时的生命比例 %','panelSettings.hpPct','number',{min:0,max:100,wide:true,help:'默认满生命、无护盾、远离敌人；与实战指标里的生命状态分开。'})+(config.character==='玛薇卡'&&config.cons>=2?field('五件圣遗物的攻击力%合计','panelExtra.atkPct','number',{min:0,wide:true,help:'2命在夜魂中改变白字，仅总攻击不能区分原有大攻击和小攻击；截图识别可自动提供这个值。'}):'')+'</div><button class="add-btn" data-action="example-panel" style="margin-top:12px">填入无副词条示例，再按实际修改</button><p class="help">面板输入受游戏显示精度影响。</p>',{tag:'RESIDENT PANEL / INPUT'});
   }
   function ocrField(label,path,value,options){return '<div class="field"><label>'+esc(label)+'</label>'+(options?'<select aria-label="'+esc(label)+'" data-ocr-path="'+path+'">'+optionsHTML(options,value)+'</select>':'<input aria-label="'+esc(label)+'" type="number" step="any" data-ocr-path="'+path+'" value="'+esc(value??'')+'" placeholder="待核对">')+'</div>';}
   function ocrPanel(){
@@ -297,7 +299,7 @@
     const bonuses=new Map();for(const d of details)for(const b of d.artifactCritBonuses||[]){const id=b.source+':'+b.key;if(!bonuses.has(id))bonuses.set(id,{...b,values:new Set()});bonuses.get(id).values.add(b.value);}
     const label=key=>{const m=/^(.*?)(Cpct|Cdmg)$/.exec(key);return key==='cpct'?'暴击率':key==='cdmg'?'暴击伤害':(({a:'普攻',a2:'重击',a3:'下落',e:'战技',q:'爆发',stellarConduct:'星超导',stellarSwirl:'星扩散',stellarVortex:'星辉冰旋',lunarCharged:'月感电',lunarBloom:'月绽放',lunarCrystallize:'月结晶'})[m?.[1]]||m?.[1]||'')+(m?.[2]==='Cdmg'?'暴击伤害':'暴击率');};
     const bonusText=[...bonuses.values()].map(b=>esc(b.source)+' '+[...b.values].sort((a,b)=>a-b).map(n=>'+'+fmt(n,1)+'%').join(' / ')+esc(label(b.key))).join('；');
-    return '<div class="crit-panel"><p class="crit-heading">配装双暴 · 常驻数值</p><div class="result-mini reference-crit"><span>暴击率 <strong class="num">'+fmt(reference.cpct,1)+'%</strong></span><span>暴击伤害 <strong class="num">'+fmt(reference.cdmg,1)+'%</strong></span></div><p class="crit-heading">伤害计算 · 当前生效状态</p><div class="result-mini calculation-crit">'+(calls.length?'<span>有效暴击率 <strong class="num">'+range('cr',true)+'</strong></span><span>暴击伤害 <strong class="num">'+range('cd')+'</strong></span>':'<span>此指标不使用常规双暴</span>')+'<span>充能 '+fmt(r.panel.recharge,1)+'%</span></div>'+(bonusText?'<p class="crit-note artifact-crit">套装条件加成：'+bonusText+'（已计入适用伤害）</p>':'')+'<p class="crit-note">常驻双暴不含条件与队友加成；实际结算见上方，分段不同时显示范围。</p></div>';
+    return '<div class="crit-panel"><p class="crit-heading">配装双暴 · 常驻数值</p><div class="result-mini reference-crit"><span>暴击率 <strong class="num">'+fmt(reference.cpct,1)+'%</strong></span><span>暴击伤害 <strong class="num">'+fmt(reference.cdmg,1)+'%</strong></span></div><p class="crit-heading">伤害计算 · 当前生效状态</p><div class="result-mini calculation-crit">'+(calls.length?'<span>有效暴击率 <strong class="num">'+range('cr',true)+'</strong></span><span>暴击伤害 <strong class="num">'+range('cd')+'</strong></span>':'<span>此指标不使用常规双暴</span>')+'<span>充能 '+fmt(r.panel.recharge,1)+'%</span></div>'+(bonusText?'<p class="crit-note artifact-crit">套装条件加成：'+bonusText+'（已计入适用伤害）</p>':'')+'</div>';
   }
   function skirkResultState(r){
     const d=(r.details||[]).find(d=>d.params?.skirkEffectiveExtra!==undefined);if(!d)return '';
@@ -359,7 +361,7 @@
         '<p class="roll-score-damage">最优参考期望伤害 <strong class="num">'+fmt(score.optimum.total)+'</strong></p>'+
         '<details class="method-details"><summary>查看当前与最优分配</summary><table class="data-table roll-score-table"><thead><tr><th>副属性</th><th>当前条数</th><th>最优条数</th></tr></thead><tbody>'+rows+'</tbody></table></details></section>';
     }).join('');
-    return blocks?card('有效词条数与分配完成度','<div class="roll-score-grid">'+blocks+'</div><p class="help">占比按当前期望伤害 ÷ 同等效词条数的连续搜索最优值计算，固定当前主属性、武器、套装及增益。先扣主属性，小数值按90级基数折算；仅满足循环的充能不占预算。常驻面板输入为估算。</p>').replace('class="card"','class="card substat-score-card"'):'';
+    return blocks?card('有效词条数与分配完成度','<div class="roll-score-grid">'+blocks+'</div><p class="help">占比 = 当前期望伤害 ÷ 同预算连续搜索值。固定现有主属性与装备；常驻面板输入为估算。</p>').replace('class="card"','class="card substat-score-card"'):'';
   }
   function resultContent(mode) {
     let data=results[mode]?.[goal];
@@ -386,14 +388,46 @@
     const sourceRows=list=>list.map(e=>'<tr><td>'+esc(e.owner||t.owner)+' · '+esc(e.source)+'</td><td>'+esc(names[e.stat])+' '+(e.points>=0?'+':'')+value(e.stat,e.points)+(e.key?.endsWith('Pct')?'（白字×'+fmt(e.value,3)+'%）':'')+'</td><td>'+esc(e.policy==='baseline-excluded'?'常驻已包含，先拆分后重算':e.policy==='direct'||e.policy==='columbinaC2'?'允许一般转化':e.policy==='nicoleC2'?'借入属性；布伦妮鼓舞有单独例外':'计入总属性，按具体技能判断能否再转化')+'</td></tr>').join('');
     return '<details class="method-details support-panel-details"><summary>辅助属性如何得到 · 常驻输入 → 本次采用值</summary><p class="help">'+esc(p.timing)+'。数值来自本次结果；输入已含装备常驻属性，以下只补临时变化并按来源限制转化。</p><div class="table-wrap"><table class="data-table"><thead><tr><th>属性</th><th>常驻输入</th><th>命中时总值</th><th>本次技能采用</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+(sources.length?'<div class="table-wrap"><table class="data-table"><thead><tr><th>属性来源</th><th>实际变化</th><th>转化规则</th></tr></thead><tbody>'+sourceRows(sources)+'</tbody></table></div>':'<p class="help">本次没有额外的相关属性变化。</p>')+(cast.length?'<p class="help">施放取样时另有的来源（只对相应锁定属性的技能生效）：</p><div class="table-wrap"><table class="data-table"><tbody>'+sourceRows(cast)+'</tbody></table></div>':'')+(refresh.length?'<p class="help">最近一次武器刷新时另有的来源（只保存在该轮武器增益内）：</p><div class="table-wrap"><table class="data-table"><tbody>'+sourceRows(refresh)+'</tbody></table></div>':'')+'</details>';
   }
-  function teamReport(r){
+  function teamReport(r,{prefix='',stateKey='team-report:'+tab}={}){
     const v=r?.base||r,a=window.GTeam.report(v?.teamAudit);if(!v?.teamAudit)return '';
     const records=a.records||[],people=new Map((a.snapshots||[]).map(t=>[t.owner,t]));for(const e of records)if(!people.has(e.owner))people.set(e.owner,null);
     const unit=k=>k.startsWith('talent')?'级':['mastery','masteryBorrowed','atkPlus','atkBorrowed','hpPlus','defPlus','flat'].includes(k)?'':'%';
     const table=(items,other=false)=>'<div class="table-wrap"><table class="data-table support-effects"><thead><tr><th>来源</th><th>'+(other?'受限或未采用的增益':'本次采用的增益')+'</th><th>适用分项 / 次数</th></tr></thead><tbody>'+items.map(e=>'<tr><td>'+esc(e.category)+'<br>'+esc(e.source)+'</td><td>'+esc(window.GTeam.effectLabel(e.key))+' <strong class="num">'+(e.value>=0?'+':'')+Number(e.value).toLocaleString('zh-CN',{maximumFractionDigits:4})+unit(e.key)+'</strong></td><td>'+(e.displayStatus==='used'?e.usedTargets:e.targets).map(esc).join('、')+(e.count?'<br>实际 '+fmt(e.count,2)+' 次'+(Number.isFinite(e.quota)?' / '+fmt(e.quota,2)+' 次可用':''):'')+(e.reason?'<br><span class="help">'+esc(e.reason)+'</span>':'')+'</td></tr>').join('')+'</tbody></table></div>';
     const body=[...people].map(([name,t])=>{const rows=records.filter(e=>e.owner===name),used=rows.filter(e=>e.displayStatus==='used'),other=rows.filter(e=>e.displayStatus==='other');return '<section class="support-report"><h4>'+esc(name)+'</h4>'+(t?'<p class="help">'+t.cons+'命 · '+esc(t.weapon)+' 精'+t.refine+' · '+(name==='瓦列里'?'A'+t.talents.a+' / ':'')+'E'+t.talents.e+' / Q'+t.talents.q+' · '+esc(t.set==='none'?'未选套装':t.set)+'</p><div class="stat-pills">'+Object.entries(t.inputs||{}).filter(([,n])=>n!==undefined&&n!=='').map(([k,n])=>'<span class="stat-pill">'+esc(({atk:'攻击',hp:'生命',def:'防御',mastery:'精通',cpct:'暴率',recharge:'充能'})[k]||k)+' '+fmt(n,2)+(['cpct','recharge'].includes(k)?'%':'')+'</span>').join('')+'</div>'+supportPanelReport(t):'')+(used.length?table(used):'<p class="help">此来源没有直接用于本指标的额外伤害增益。对其他辅助的属性影响，可在相应辅助的属性明细中查看。</p>')+(other.length?'<details class="method-details"><summary>本指标的覆盖与限制说明 · '+other.length+'项</summary>'+table(other,true)+'</details>':'')+'</section>';}).join('');
     const geoNote=(v.teamAudit.records||[]).some(e=>/双岩共鸣/.test(e.source||''))&&(v.teamAudit.targets||[]).some(t=>(t.calls||[]).some(c=>c.rx==='lunarCrystallize'))?'<p class="help">双岩的15%普通伤害加成不作用于月结晶伤害；20%岩减抗仍按触发状态计入，下方只列本指标实际采用项。</p>':'';
-    return card('本次组队计算 · 实际增益清单','<p class="panel-intro">只展示本次指标使用的增益与来源；其他反应、其他元素及未改变本指标的无关记录不重复列出。有限次数按实际使用量列出；同类覆盖、暴击封顶和循环充能另附原因。修改配置后需重新计算。</p>'+geoNote+body,{tag:'TEAM BUFFS / THIS RESULT',detail:true,stateKey:'team-report:'+tab});
+    return card('本次组队计算 · 实际增益清单',prefix+geoNote+body,{detail:true,stateKey});
+  }
+  function comparisonSettings(){config.weaponComparison=W.settings(config);return config.weaponComparison;}
+  function comparisonCharacterCard(){
+    const c=E.character(config.character),s=comparisonSettings(),levels=Object.keys(c.stats.details).filter(k=>['80','80+','90','100'].includes(k));
+    const setFields=field('圣遗物套装','setChoice','text',{wide:true,options:Guides.artifactOptions(c.key)})+(config.setChoice==='two'?['0','1'].map(i=>field('两件套 '+(Number(i)+1),'sets.'+i+'.name','text',{options:[['','请选择'],...D.artifacts.filter(a=>a.maxRarity===5).map(a=>[a.name,a.name])]})).join(''):'');
+    const mainFields=Object.keys(mainOptions).map(slot=>field(({sands:'时之沙',goblet:'空之杯',circlet:'理之冠'})[slot],'weaponComparison.mains.'+slot,'text',{options:[['auto','自动寻优'],...mainOptions[slot].map(key=>[key,E.LABELS[key]])]})).join('');
+    return card('主C配置','<div class="comparison-main-top"><div class="character-box"><label for="character-search">角色</label><input id="character-search" aria-label="搜索角色名称" value="'+esc(config.character)+'" autocomplete="off"><div id="character-results" class="character-results hidden"></div></div>'+field('角色等级','level','text',{options:levels.map(k=>[k,k+'级'])})+field('命座','cons','number',{numeric:true,options:[0,1,2,3,4,5,6].map(n=>[n,n+'命'])})+'<div class="fields comparison-main-set">'+setFields+'</div></div>'+(c.talentMale?'<div class="fields">'+field('旅行者','travelerGender','text',{options:[['female','荧'],['male','空']]})+'</div>':'')+'<div class="comparison-main-bottom"><div>'+talentFields()+'</div><div class="fields three">'+mainFields+'</div></div>');
+  }
+  function comparisonWeaponCard(){
+    const s=comparisonSettings(),rows=s.rows.map((row,i)=>'<div class="comparison-weapon-choice"><div class="comparison-weapon-select"><input type="checkbox" aria-label="参与对比：'+esc(row.weapon||'武器'+(i+1))+'" data-path="weaponComparison.rows.'+i+'.enabled"'+(row.enabled?' checked':'')+'><select aria-label="对比武器 '+(i+1)+'" data-path="weaponComparison.rows.'+i+'.weapon">'+optionsHTML(Guides.weaponOptions(config.character),row.weapon)+'</select><button type="button" class="remove-btn" data-remove-weapon="'+i+'" aria-label="删除对比武器 '+(i+1)+'">×</button></div><div class="comparison-refine-line"><label for="compare-refine-'+i+'">精炼</label><select id="compare-refine-'+i+'" data-number="true" data-path="weaponComparison.rows.'+i+'.refine">'+[1,2,3,4,5].map(n=>option(n,'精炼'+n,row.refine)).join('')+'</select></div></div>').join('');
+    return card('对比武器',rows+'<button class="add-btn" data-action="add-weapon"'+(s.rows.length>=60?' disabled':'')+'>＋ 添加武器</button><button class="primary comparison-start" data-action="calculate"'+(busy?' disabled':'')+'>'+(busy?'计算中…':'开始对比')+'</button>'+(busy?'<button class="soft-btn comparison-start" data-action="cancel-weapons">取消对比</button>':''));
+  }
+  function comparisonResults(){
+    const data=results.weapons;
+    if(!data)return card('期望伤害排名','<div class="comparison-empty">选好队伍和对比武器后开始计算。</div>');
+    const labels=['sands','goblet','circlet'],names={sands:'沙',goblet:'杯',circlet:'冠'};
+    const rows=data.rows.map((row,index)=>{
+      const r=row.result;if(!r)return '<article class="weapon-result"><strong>'+esc(row.weapon)+' · 精炼'+row.refine+'</strong><p class="error">'+esc(row.error)+'</p></article>';
+      const key='weapon-result:'+row.weapon+':'+row.refine,allocation=Object.entries(r.allocation).filter(([,n])=>n>1e-6);
+      const allocationText=allocation.map(([k,n])=>'<span>'+esc(E.LABELS[k])+' <b class="num">'+fmt(n,2)+'</b> 条</span>').join('');
+      const max=Math.max(1,...allocation.map(([,n])=>n)),bars=allocation.map(([k,n])=>'<div class="comparison-roll"><span>'+esc(E.LABELS[k])+'</span><div class="bar-track"><div class="bar-fill team" style="width:'+100*n/max+'%"></div></div><b class="num">'+fmt(n,2)+'</b></div>').join('');
+      const trace=r.details.map(d=>'<details class="method-details"><summary>'+esc(d.title)+'</summary>'+d.calls.map(callFormula).join('')+'</details>').join('');
+      return '<article class="weapon-result" data-weapon-result="'+index+'"><div class="weapon-result-top"><div><strong>'+esc(row.weapon)+'</strong><small>精炼'+row.refine+'</small></div><span class="num weapon-damage">'+fmt(r.total)+'</span><strong class="num weapon-percent">'+fmt(row.percentage,1)+'%</strong></div><div class="comparison-ratio-track" role="img" aria-label="相对最高期望伤害'+fmt(row.percentage,1)+'%"><span style="width:'+row.percentage+'%"></span></div><div class="comparison-mains"><span>主属性</span>'+labels.map(slot=>'<span>'+names[slot]+' '+esc(E.LABELS[r.mains[slot]])+'</span>').join('')+'</div><div class="comparison-allocation">'+allocationText+'</div><details class="method-details comparison-detail" data-card-title="'+esc(key)+'"'+(openedCards.get(key)?' open':'')+'><summary>分配详情与结算属性</summary><div class="comparison-detail-body">'+settlementCaption({team:r},true)+bars+critPanel(r)+'<p class="help">全暴击伤害 <strong class="num">'+fmt(r.critical)+'</strong> · 合计 '+fmt(Object.values(r.allocation).reduce((a,b)=>a+b,0),2)+' 有效词条</p>'+trace+'</div></details></article>';
+    }).join('');
+    const success=data.rows.filter(row=>row.result);comparisonAudit=Math.max(0,Math.min(comparisonAudit,success.length-1));
+    const logs=success.length?teamReport(success[comparisonAudit].result,{prefix:'<div class="field"><label for="comparison-audit">查看武器</label><select id="comparison-audit" data-comparison-audit>'+success.map((row,i)=>option(i,row.weapon+' · 精炼'+row.refine,comparisonAudit)).join('')+'</select></div>',stateKey:'team-report:weapons'}):'';
+    return card('期望伤害排名','<div class="comparison-results-meta"><span>'+esc(M.definition(config,data.metricId)?.title||data.metricId)+'</span><span>'+fmt(data.budget,2)+' 有效词条 · 最高项100%</span></div><div class="weapon-result-top comparison-column-head"><span>武器</span><span>期望总伤害</span><span>相对最高项</span></div>'+rows)+logs+card('计算方法','<p>各武器使用相同有效副词条预算，独立搜索沙、杯、冠主属性与连续副词条分配。小词条按该武器对应的90级白字折算。</p><p>采用多起点数值搜索，结果不代表已证明的严格全局最优。</p>',{detail:true});
+  }
+  function comparisonPage(){
+    const s=comparisonSettings();
+    const conditions=card('对比条件','<div class="fields comparison-conditions">'+field('伤害指标','weaponComparison.metricId','text',{wide:true,options:M.definitions(config).map(m=>[m.id,m.title])})+field('有效副词条总数','budget','number',{min:0,max:60,step:.1})+'</div>');
+    return '<div class="comparison-page"><h2>组队武器对比</h2>'+comparisonCharacterCard()+'<div class="comparison-team">'+teammatesCard()+'</div>'+conditions+'<div class="comparison-extra">'+metricSettingsCard()+manualBuffCard()+buffsCard()+contributorsCard()+'</div><div class="comparison-bottom"><aside>'+comparisonWeaponCard()+'</aside><section class="results '+(dirty?'stale':'')+'"><div class="calculate-line"><span class="status-msg">'+(busy?'正在逐把武器重新优化…':dirty&&results.weapons?'配置已变化，请重新计算':'')+'</span><button class="soft-btn" data-action="weapon-csv"'+(!results.weapons||dirty||busy?' disabled':'')+'>导出结果</button></div>'+(busy?'<div class="progress"><div style="width:'+progress+'%"></div></div>':'')+(error?'<div class="error" role="alert">'+esc(error)+'</div>':'')+comparisonResults()+'</section></div></div>';
   }
   function formulasPage() {
     function formula(title,eq,body){return '<section class="card formula-card"><div class="card-head"><h3>'+title+'</h3><span class="section-tag">FORMULA</span></div><div class="formula-body"><div class="equation">'+eq+'</div>'+body+'</div></section>';}
@@ -422,8 +456,8 @@
     for(const d of root.querySelectorAll('details[data-card-title]'))openedCards.set(d.dataset.cardTitle,d.open);
     config.setChoice=config.setChoice||'none';
     if(!M.selected(config).some(m=>m.id===goal))goal=M.selected(config)[0]?.id||'';
-    root.innerHTML='<header class="topbar"><div class="topbar-inner"><div class="brand"><div class="brand-icon">✧</div><div><h1>提瓦特词条实验室</h1><p>TEYVAT · ARTIFACT STAT LAB</p></div></div>'+appearancePicker()+'<div class="top-actions"><span class="badge">原神 '+D.version+' · 月 / 星反应</span><button class="soft-btn" data-action="import">导入配置</button><button class="soft-btn" data-action="export">保存配置 ↓</button></div></div></header><main class="workspace"><nav class="main-nav">'+[['optimize','最优分配'],['marginal','词条收益'],['formulas','公式与数据']].map(([k,l],i)=>'<button class="nav-btn '+(tab===k?'active':'')+'" data-tab="'+k+'"><span class="nav-num">0'+(i+1)+'</span>'+l+'</button>').join('')+'</nav>'+
-      (tab==='formulas'?formulasPage():'<div class="layout"><aside class="sidebar">'+characterCard()+(tab==='marginal'?panelCard():'')+artifactsCard()+(tab==='optimize'?budgetCard():'')+metricsCard()+metricSettingsCard()+teammatesCard()+manualBuffCard()+buffsCard()+contributorsCard()+'</aside><section class="results '+(dirty?'stale':'')+'"><div class="results-top"><div><h3>'+(tab==='optimize'?'各伤害指标 · 分别求最优':'一个词条，会带来多少提升')+'</h3><p>固定主词条与实际配置，比较单人和组队。</p></div>'+goalSwitch()+'</div><div class="calculate-line" style="margin-bottom:15px"><span class="status-msg">'+(busy?'正在计算…':dirty?'配置已变化，请重新计算':'可展开计算依据核对每个乘区')+'</span><div style="margin-left:auto;display:flex;gap:7px"><button class="soft-btn" data-action="csv" '+(!results[tab]?.[goal]||dirty||busy?'disabled':'')+'>导出结果</button><button class="primary" data-action="calculate"'+(busy?' disabled':'')+'>'+(busy?'计算中…':tab==='marginal'?'比较所选指标收益':'分别优化所选指标')+'<span class="arrow">→</span></button></div></div>'+(busy?'<div class="progress"><div style="width:'+progress+'%"></div></div>':'')+(error?'<div class="error" role="alert">'+esc(error)+'</div>':'')+metricOverview(tab)+(activeMetric()?'<div class="metric-assumptions"><strong>'+esc(activeMetric().title)+'</strong><ul>'+M.describe(config,activeMetric()).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul></div>':'')+resultContent(tab)+'</section></div>')+
+    root.innerHTML='<header class="topbar"><div class="topbar-inner"><div class="brand"><div class="brand-icon">✧</div><div><h1>提瓦特词条实验室</h1><p>TEYVAT · ARTIFACT STAT LAB</p></div></div>'+appearancePicker()+'<div class="top-actions"><span class="badge">原神 '+D.version+' · 月 / 星反应</span><button class="soft-btn" data-action="import">导入配置</button><button class="soft-btn" data-action="export">保存配置 ↓</button></div></div></header><main class="workspace"><nav class="main-nav">'+[['optimize','最优分配'],['marginal','词条收益'],['weapons','武器对比'],['formulas','公式与数据']].map(([k,l],i)=>'<button class="nav-btn '+(tab===k?'active':'')+'" data-tab="'+k+'"><span class="nav-num">0'+(i+1)+'</span>'+l+'</button>').join('')+'</nav>'+
+      (tab==='formulas'?formulasPage():tab==='weapons'?comparisonPage():'<div class="layout"><aside class="sidebar">'+characterCard()+(tab==='marginal'?panelCard():'')+artifactsCard()+(tab==='optimize'?budgetCard():'')+metricsCard()+metricSettingsCard()+teammatesCard()+manualBuffCard()+buffsCard()+contributorsCard()+'</aside><section class="results '+(dirty?'stale':'')+'"><div class="results-top"><div><h3>'+(tab==='optimize'?'各伤害指标 · 分别求最优':'一个词条，会带来多少提升')+'</h3></div>'+goalSwitch()+'</div><div class="calculate-line" style="margin-bottom:15px"><span class="status-msg">'+(busy?'正在计算…':dirty?'配置已变化，请重新计算':'')+'</span><div style="margin-left:auto;display:flex;gap:7px"><button class="soft-btn" data-action="csv" '+(!results[tab]?.[goal]||dirty||busy?'disabled':'')+'>导出结果</button><button class="primary" data-action="calculate"'+(busy?' disabled':'')+'>'+(busy?'计算中…':tab==='marginal'?'比较所选指标收益':'分别优化所选指标')+'<span class="arrow">→</span></button></div></div>'+(busy?'<div class="progress"><div style="width:'+progress+'%"></div></div>':'')+(error?'<div class="error" role="alert">'+esc(error)+'</div>':'')+metricOverview(tab)+(activeMetric()?'<div class="metric-assumptions"><strong>'+esc(activeMetric().title)+'</strong><ul>'+M.describe(config,activeMetric()).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul></div>':'')+resultContent(tab)+'</section></div>')+
       '<footer class="footer"><span>五星圣遗物 · 花与羽毛固定 · 输入的技能条件与增益决定结果</span><span><a href="USER_GUIDE.html" target="_blank">使用说明与覆盖范围</a> · '+(window.location.protocol==='file:'?'':'<a href="teyvat-offline.zip" download>下载离线版</a> · ')+'<a href="THIRD_PARTY_NOTICES.txt" target="_blank">许可信息</a> · 本地保存</span></footer></main>'+(tab==='formulas'?'':'<div class="mobile-actions"><button class="soft-btn" data-action="view-results">查看结果 ↑</button><button class="primary" data-action="calculate"'+(busy?' disabled':'')+'>'+(busy?'计算中…':'计算所选指标 →')+'</button></div>')+'<button type="button" class="back-to-top'+(tab==='formulas'?'':' above-mobile-actions')+'" data-action="back-to-top" aria-label="返回顶部" title="返回顶部"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 14l6-6 6 6M6 4h12"/></svg><span>顶部</span></button>'+'<input class="hidden" type="file" id="config-file" accept=".json">';
     pendingOcrUi();
   }
@@ -452,14 +486,15 @@
   }
   function toast(s){document.querySelector('.save-toast')?.remove();const el=document.createElement('div');el.className='save-toast';el.textContent=s;document.body.appendChild(el);setTimeout(()=>el.remove(),2300);}
   function download(name,text,type='application/json'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);}
-  function validate() {
+  function validate({comparison=false}={}) {
     if(invalidInputs.size)throw new Error('请先修正尚未有效填写的技能参数 JSON。');
-    if(!config.weapon)throw new Error('请先选择主角色的武器和精炼等级。');
-    if(!M.selected(config).length)throw new Error('请至少选择一个角色伤害指标。');
-    if(Object.keys(mainOptions).some(k=>!mainOptions[k].includes(config.mains[k])))throw new Error('请先选择时之沙、空之杯、理之冠的三个有效主属性。');
+    if(comparison)W.validate(config);
+    if(!comparison&&!config.weapon)throw new Error('请先选择主角色的武器和精炼等级。');
+    if(!comparison&&!M.selected(config).length)throw new Error('请至少选择一个角色伤害指标。');
+    if(!comparison&&Object.keys(mainOptions).some(k=>!mainOptions[k].includes(config.mains[k])))throw new Error('请先选择时之沙、空之杯、理之冠的三个有效主属性。');
     function numeric(label,value,min=-Infinity,max=Infinity,integer=false){if(value===''||value===null||!Number.isFinite(Number(value))||value<min||value>max||integer&&!Number.isInteger(Number(value)))throw new Error(label+'需为'+(integer?'整数':'数字')+'，范围 '+min+'–'+max+'。');}
     if(!['full','manual'].includes(config.supportMode))throw new Error('队友增益状态无效。');
-    numeric('命座',config.cons,0,6,true);numeric('武器精炼',config.refine,1,5,true);
+    numeric('命座',config.cons,0,6,true);if(!comparison)numeric('武器精炼',config.refine,1,5,true);
     E.getStats(E.character(config.character),config.level);
     numeric('有效词条总数',config.budget,0,60);
     if(!Array.isArray(config.artifactStarts)||config.artifactStarts.length!==5||config.artifactStarts.some(n=>![3,4].includes(n)))throw new Error('请确认五件圣遗物起始副词条各为3条或4条。');
@@ -467,7 +502,7 @@
     for(const k of ['a','e','q'])numeric('主角色天赋',config.talents[k],1,10,true);
     for(const r of config.teamRows||[])if(!buffFields[r.key]||r.value===''||!Number.isFinite(Number(r.value)))throw new Error('补充增益的类型和数值需要有效填写。');
     for(const s of config.sets||[])if(!D.artifacts.some(a=>a.name===s.name&&a.maxRarity===5))throw new Error('主角色请选择五星套装。本计算的词条单位与主属性为五星20级。');
-    if(config.weapon==='custom')numeric('自定义武器白字',config.customWeapon.base,1,2000);
+    if(!comparison&&config.weapon==='custom')numeric('自定义武器白字',config.customWeapon.base,1,2000);
     if(tab==='marginal'&&config.panelMode==='artifacts'){
       const totals=config.artifactPanel||{},main=E.artifactMainStats(config.mains);
       for(const k of Object.keys(E.ROLLS))if(!Number.isFinite(Number(totals[k]))||totals[k]<main[k]-1e-8)throw new Error('圣遗物合计的'+E.LABELS[k]+'不足以包含已选主词条，请核对五件属性总和。');
@@ -475,6 +510,8 @@
     }
   }
   async function calculate() {
+    if(busy){if(weaponController)return;while(busy)await new Promise(resolve=>setTimeout(resolve,15));return calculate();}
+    if(tab==='weapons')return calculateWeapons();
     if(ocr.busy||ocr.draft){error=ocr.busy?'正在识别截图，请等待或取消识别。':'请先核对并采用截图识别结果，或者放弃此次识别后再计算。';render();root.querySelector(ocr.draft?'.ocr-confirm':'.ocr-upload')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
     try{validate();}catch(e){error=e.message;render();root.querySelector('.error')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
     error='';busy=true;progress=0;render();
@@ -501,7 +538,17 @@
         }
       }
     }
-    if(config.character!==snapshot.character)results[mode]={};busy=false;dirty=JSON.stringify(snapshot)!==JSON.stringify(config);render();if(window.matchMedia('(max-width: 1000px)').matches)root.querySelector('.results')?.scrollIntoView({behavior:'smooth',block:'start'});
+    resultSnapshots[mode]=JSON.stringify(snapshot);if(config.character!==snapshot.character)results[mode]={};busy=false;dirty=JSON.stringify(snapshot)!==JSON.stringify(config);render();if(window.matchMedia('(max-width: 1000px)').matches)root.querySelector('.results')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  async function calculateWeapons(){
+    if(ocr.busy||ocr.draft){error='请先完成或放弃当前截图识别，再进行武器对比。';render();return;}
+    try{sync();comparisonSettings();validate({comparison:true});}catch(e){error=e.message;render();root.querySelector('.error')?.scrollIntoView({block:'center',behavior:'smooth'});return;}
+    const snapshot=copy(config);error='';progress=0;busy=true;weaponController=new AbortController();render();
+    try{
+      const compared=await W.compare(snapshot,(p,item)=>{progress=p*100;const bar=root.querySelector('.progress div');if(bar)bar.style.width=progress+'%';const message=root.querySelector('.status-msg');if(message)message.textContent='正在优化 '+item.weapon+'（'+(item.index+1)+' / '+item.total+'）';},{signal:weaponController.signal});
+      if(config.character===snapshot.character){results.weapons=compared;resultSnapshots.weapons=JSON.stringify(snapshot);comparisonAudit=0;}
+    }catch(e){if(e.name==='AbortError')error='已取消对比，保留上一次结果。';else error=e.message;}
+    finally{busy=false;weaponController=null;dirty=JSON.stringify(snapshot)!==JSON.stringify(config);render();if(window.matchMedia('(max-width: 1000px)').matches)root.querySelector('.results')?.scrollIntoView({block:'start',behavior:'smooth'});}
   }
   function imageDropZone(event){return event.target?.closest?.('.ocr-upload')||event.target?.parentElement?.closest?.('.ocr-upload');}
   function draggingFiles(data){return Array.from(data?.types||[]).includes('Files')||Array.from(data?.items||[]).some(item=>item.kind==='file')||!!data?.files?.length;}
@@ -541,6 +588,7 @@
     if(el.id==='artifact-image'&&el.files[0]){recognizeScreenshot(el.files[0]);return;}
     if(el.hasAttribute('data-ocr-confirm')){ocr.confirmed=el.checked;const b=root.querySelector('.ocr-apply');if(b)b.disabled=!ocr.confirmed;pendingOcrUi();return;}
     if(el.dataset.ocrPath){set(el.dataset.ocrPath,/configuration\.(cons|refine)$|\.value$/.test(el.dataset.ocrPath)&&el.value!==''?Number(el.value):el.value,ocr.draft);ocr.confirmed=false;const b=root.querySelector('.ocr-apply');if(b)b.disabled=true;const check=root.querySelector('[data-ocr-confirm]');if(check)check.checked=false;if(/pieces\.\d\.main\.key$/.test(el.dataset.ocrPath))render();else pendingOcrUi();return;}
+    if(el.hasAttribute('data-comparison-audit')){comparisonAudit=Number(el.value);render();return;}
     if(el.dataset.metricId){const ids=new Set(M.selected(config).map(m=>m.id));el.checked?ids.add(el.dataset.metricId):ids.delete(el.dataset.metricId);config.metricIds=[...ids];markDirty();render();return;}
     if(el.dataset.listPath){const values=new Set(get(el.dataset.listPath)||[]);el.checked?values.add(el.dataset.listValue):values.delete(el.dataset.listValue);set(el.dataset.listPath,[...values]);markDirty();return;}
     if(el.dataset.path) {
@@ -578,9 +626,10 @@
       return;
     }
     if(button.dataset.character){selectCharacter(button.dataset.character);return;}
-    if(button.dataset.tab){tab=button.dataset.tab;error='';render();return;}
+    if(button.dataset.tab){tab=button.dataset.tab;dirty=resultSnapshots[tab]?resultSnapshots[tab]!==JSON.stringify(config):dirty;error='';render();return;}
     if(button.dataset.goal){goal=button.dataset.goal;render();return;}
 
+    if(button.dataset.removeWeapon!==undefined){config.weaponComparison.rows.splice(Number(button.dataset.removeWeapon),1);markDirty();render();return;}
     if(button.dataset.removeBuff!==undefined){config.teamRows.splice(Number(button.dataset.removeBuff),1);markDirty();render();return;}
     if(button.dataset.removeContributor!==undefined){config.contributors.splice(Number(button.dataset.removeContributor),1);markDirty();render();return;}
     switch(button.dataset.action) {
@@ -589,6 +638,14 @@
       case 'ocr-dismiss':ocr.draft=null;ocr.error='';ocr.confirmed=false;error='';render();break;
       case 'ocr-apply':applyScreenshot();break;
       case 'calculate':if(ocr.draft&&ocr.confirmed)applyScreenshot();else calculate();break;
+      case 'cancel-weapons':weaponController?.abort();break;
+      case 'add-weapon':if(comparisonSettings().rows.length<60){config.weaponComparison.rows.push({weapon:'',refine:1,enabled:true});markDirty();render();}break;
+      case 'weapon-csv':{
+        if(!results.weapons||dirty||busy)break;
+        const rows=[['角色',config.character],['伤害指标',M.definition(config,results.weapons.metricId)?.title],['有效副词条预算',results.weapons.budget],['武器','精炼','期望伤害','相对最高项 %','全暴击伤害','沙','杯','冠','副词条分配 / 错误']];
+        for(const row of results.weapons.rows){const r=row.result;rows.push([row.weapon,row.refine,r?.total??'',row.percentage??'',r?.critical??'',...['sands','goblet','circlet'].map(slot=>r?E.LABELS[r.mains[slot]]:''),r?Object.entries(r.allocation).filter(([,n])=>n>1e-6).map(([key,n])=>E.LABELS[key]+' '+n.toFixed(4)).join('；'):row.error]);}
+        download('原神武器对比-'+config.character+'.csv','\ufeff'+rows.map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');break;
+      }
       case 'back-to-top':window.scrollTo({top:0,left:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;
       case 'view-results':root.querySelector('.results')?.scrollIntoView({behavior:'smooth',block:'start'});break;
 

@@ -1,0 +1,122 @@
+.comparison-page { display:grid;gap:20px;font-size:16px; }
+.comparison-page h2 { margin:0;font-size:23px; }
+.comparison-page .card { margin:0;min-width:0; }
+.comparison-page .card-head,
+.comparison-page .comparison-team > details > summary {
+  background:var(--slot-heading);color:var(--on-accent);
+  padding:13px 18px;border-radius:calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+}
+.comparison-page .card-head h3 { font-size:18px; }
+.comparison-page .card-body { padding:18px; }
+.comparison-page .field label,.comparison-main-top .character-box > label { font-size:14px;color:var(--label); }
+.comparison-main-top { display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.65fr) minmax(0,.65fr) minmax(0,1.5fr);gap:16px;align-items:start; }
+.comparison-main-top .character-box { margin:0;display:grid;gap:6px; }
+.comparison-main-top .character-box input { padding:10px 12px;min-height:44px;font-size:16px; }
+.comparison-main-top .character-results { z-index:10; }
+.comparison-main-top .fields { gap:12px; }
+.comparison-main-bottom { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:22px;margin-top:18px;padding-top:17px;border-top:1px solid var(--rule); }
+.comparison-main-bottom .fields.three { gap:12px; }
+.comparison-page .comparison-team > details > summary { font-size:18px; }
+.comparison-page .comparison-team > details:not([open]) > summary { border-radius:var(--radius); }
+.comparison-team > details > .card-body { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 18px; }
+.comparison-team > details > .card-body > .field.wide { grid-column:auto; }
+.comparison-team > details > .card-body > .team-slots,
+.comparison-team > details > .card-body > :not(.field) { grid-column:1/-1; }
+.comparison-team .team-slots { grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0;align-items:start; }
+.comparison-team .team-slot-heading { padding:11px 14px;font-size:17px; }
+.comparison-team .team-slot-body { padding:14px; }
+.comparison-team .team-slot .fields { gap:11px; }
+.comparison-team .team-slot .field :is(input,select) { min-height:43px; }
+.comparison-team .team-slot p.help { font-size:12px; }
+.comparison-page .comparison-conditions { grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:18px; }
+.comparison-conditions > .field.wide { grid-column:auto; }
+.comparison-extra { display:grid;gap:12px; }
+.comparison-extra .details-card > summary { padding:14px 18px; }
+.comparison-bottom { display:grid;grid-template-columns:280px minmax(0,1fr);gap:20px;align-items:start; }
+.comparison-bottom > aside,.comparison-bottom > section { min-width:0; }
+.comparison-bottom .results > .card { margin-top:16px; }
+.comparison-bottom .results > .calculate-line { margin-bottom:13px;display:flex;gap:10px;align-items:center;justify-content:space-between; }
+.comparison-bottom .status-msg { font-size:13px; }
+.comparison-weapon-choice { padding:13px 0;border-bottom:1px solid var(--rule);margin-bottom:11px; }
+.comparison-weapon-choice:first-child { padding-top:0; }
+.comparison-weapon-select { display:grid;grid-template-columns:18px minmax(0,1fr) 24px;gap:7px;align-items:center; }
+.comparison-weapon-select input { accent-color:var(--accent);width:17px;height:17px;margin:0; }
+.comparison-weapon-select select,.comparison-refine-line select {
+  width:100%;min-width:0;border:var(--control-width) solid var(--control-line);border-radius:var(--control-radius);
+  background:var(--control-fill);color:var(--ink);padding:8px;font-size:14px;min-height:42px;
+}
+.comparison-weapon-select .remove-btn { width:24px;min-width:24px;padding:0; }
+.comparison-refine-line { display:flex;align-items:center;gap:13px;margin-top:10px;padding-left:25px; }
+.comparison-refine-line label { font-size:14px;color:var(--label); }
+.comparison-refine-line select { width:115px; }
+.comparison-start { width:100%;margin-top:13px;justify-content:center; }
+.comparison-results-meta { display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;color:var(--muted);font-size:13px;margin-bottom:14px; }
+.weapon-result-top { display:grid;grid-template-columns:minmax(0,1fr) 125px 105px;gap:12px;align-items:baseline; }
+.comparison-column-head { color:var(--muted);font-size:13px;border-bottom:1px solid var(--rule);padding-bottom:10px; }
+.comparison-column-head > :nth-child(n+2) { text-align:right; }
+.weapon-result { padding:20px 0; }
+.weapon-result + .weapon-result { border-top:1px solid var(--rule); }
+.weapon-result:last-child { padding-bottom:0; }
+.weapon-result-top > div > strong { font-size:18px; }
+.weapon-result-top small { color:var(--muted);font-size:12px;display:inline-block;margin-left:9px; }
+.weapon-damage { font-size:20px;font-weight:600;text-align:right; }
+.weapon-percent { font-size:27px;color:var(--accent);text-align:right; }
+.comparison-ratio-track { height:7px;background:var(--wash);border-radius:5px;overflow:hidden;margin:12px 0 14px; }
+.comparison-ratio-track span { display:block;height:100%;background:var(--accent);opacity:.78;border-radius:inherit; }
+.weapon-result:first-of-type .comparison-ratio-track span { opacity:1; }
+.comparison-mains,.comparison-allocation { display:flex;flex-wrap:wrap;gap:5px 14px;font-size:14px;color:var(--label); }
+.comparison-mains > span:first-child { color:var(--muted); }
+.comparison-allocation { margin-top:8px;color:var(--muted);font-size:13px; }
+.comparison-allocation b { color:var(--ink);font-weight:600; }
+.comparison-detail { margin-top:10px; }
+.comparison-detail > summary { color:var(--accent);font-size:14px; }
+.comparison-detail-body { background:var(--wash);padding:14px;border-radius:10px;margin-top:10px; }
+.comparison-detail .settlement-caption { margin-top:0; }
+.comparison-roll { display:grid;grid-template-columns:90px minmax(0,1fr) 55px;gap:10px;align-items:center;font-size:13px;margin:12px 0; }
+.comparison-roll b { font-weight:600;text-align:right; }
+.comparison-empty { color:var(--muted);padding:28px 0;text-align:center; }
+@media(max-width:1100px) {
+  .comparison-main-top { grid-template-columns:minmax(0,1.3fr) minmax(0,.8fr) minmax(0,.8fr); }
+  .comparison-main-set { grid-column:1/-1; }
+  .comparison-main-bottom { grid-template-columns:minmax(0,1fr);gap:18px; }
+  .comparison-team .team-slots { grid-template-columns:minmax(0,1fr); }
+  .comparison-team .team-slot-body { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;align-items:start; }
+  .comparison-team .team-slot-body > .field:first-child { grid-column:1/-1; }
+  .comparison-team .team-slot-body > .help,.comparison-team .team-slot-body > .method-details { grid-column:1/-1; }
+  .comparison-bottom { grid-template-columns:245px minmax(0,1fr);gap:16px; }
+  .weapon-result-top { grid-template-columns:minmax(0,1fr) 108px 83px;gap:9px; }
+  .weapon-result-top > div > strong { font-size:17px; }
+  .weapon-damage { font-size:18px; }
+  .weapon-percent { font-size:23px; }
+}
+@media(max-width:780px) {
+  .comparison-bottom { grid-template-columns:minmax(0,1fr); }
+  .comparison-team > details > .card-body { grid-template-columns:minmax(0,1fr); }
+  .comparison-main-top { gap:13px; }
+  .comparison-main-top > .character-box { grid-column:1/-1; }
+  .comparison-main-top { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .comparison-main-bottom .fields.three { grid-template-columns:repeat(3,minmax(0,1fr));gap:9px; }
+  .comparison-page .field label { font-size:13px; }
+  .main-nav { flex-wrap:wrap; }
+}
+@media(max-width:490px) {
+  .main-nav { column-gap:12px;row-gap:3px; }
+  .main-nav .nav-btn { font-size:13px;gap:4px;padding-inline:0; }
+  .main-nav .nav-num { font-size:11px; }
+  .comparison-page { gap:16px; }
+  .comparison-page .card-body { padding:14px; }
+  .comparison-main-bottom .fields.three { grid-template-columns:minmax(0,1fr); }
+  .comparison-main-bottom .fields.three .field { display:flex;flex-direction:column; }
+  .comparison-team .team-slot-body { display:block; }
+  .comparison-team .team-slot-body > .field { margin-bottom:12px; }
+  .comparison-page .comparison-conditions { grid-template-columns:minmax(0,1fr); }
+  .weapon-result-top { grid-template-columns:minmax(0,1fr) 85px 67px;gap:6px; }
+  .weapon-result-top > div > strong { font-size:15px; }
+  .weapon-result-top small { display:block;margin-left:0; }
+  .weapon-damage { font-size:15px; }
+  .weapon-percent { font-size:20px; }
+  .comparison-column-head { font-size:11px; }
+  .comparison-mains { font-size:13px;gap:5px 10px; }
+  .comparison-roll { grid-template-columns:75px minmax(0,1fr) 45px; }
+  .comparison-page .field :is(input,select) { font-size:16px; }
+}
