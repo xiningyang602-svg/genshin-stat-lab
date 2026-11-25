@@ -306,16 +306,19 @@
     if(c.key==='莫娜')v.monaC6ChargedStacks=metric.event==='mona-enhanced'?Math.max(0,Math.min(3,Number(s.states.monaC6ChargedStacks??3))):0;
     if(c.key==='恰斯卡')v.chascaC6OnslaughtActive=metric.event==='chasca-enhanced';
     v.metricEvent=metric.event;
-    if(metric.needsMoonsign2&&moonsign<2)throw Error('该指标需要满辉；当前真实队伍或严格单人模式不满足，请调整天赋前提或队伍。');
+    if(metric.needsMoonsign2&&moonsign<2)throw Error(scope==='team'
+      ?'该指标需要满辉，当前队伍未满足，请调整队友。'
+      :'该指标需要满辉，当前单人条件未满足。');
     if(/蒸发|融化|蔓激化|超激化/.test(metric.title))v.soloAura=true;
     if(!g.GTeam?.HEX.includes(c.key))v.homework=false;
     for(const [key,,type,options]of E.stateFields(config))if(fieldMinCons(key)>Number(config.cons||0))v[key]=type==='bool'?false:type==='select'?options[0][0]:typeof type==='number'?type:0;
     return {...p,...v,Moonsign:moonsign,Hexenzirkel:hex,partySize:p.partySize,partyElements:p.partyElements,mArtisDiffCount:p.mArtisDiffCount,mArtisSameCount:p.mArtisSameCount,liyueCount:p.liyueCount};
   }
-  function describe(config,metric){
-    const s=settings(config),notes=[];
+  function describe(config,metric,scope='both'){
+    const s=settings(config),notes=[],teamOnly=scope==='team';
     notes.push(s.ownBuffMode==='full'?'自身天赋与可用增伤采用合法满效果；命座未解锁、互斥分支、额外攻击段数和真实属性转化不因此放宽。':'自身增益使用自定义状态。');
-    notes.push(s.talentMode==='benchmark'?'单人默认满足自身天赋所需组队资格；组队按真实成员判断。两者均不虚构队友直接增益。':'使用严格单人资格，不假设组队天赋前提。');
+    if(teamOnly)notes.push('天赋资格与元素共鸣按实际队伍判断。');
+    else notes.push(s.talentMode==='benchmark'?'单人默认满足自身天赋所需组队资格；组队按真实成员判断。两者均不虚构队友直接增益。':'使用严格单人资格，不假设组队天赋前提。');
     const state={...defaultStates(config),...s.states};
     if(config.character==='那维莱特')notes.push('古海孑遗目标总层数'+state.neuvStacks+'（包含C1）；组队按可触发水反应种类封顶');
     if(config.character==='雷电将军')notes.push('本次已有愿力'+state.num+'层');
@@ -328,14 +331,14 @@
     }
     if(metric.reaction==='stellarConduct')notes.push('极星辉域已存在；上一结算周期'+s.stellarHits+'次有效附着，反应倍率'+E.specialFactor('stellarConduct',{stellarConductCount:s.stellarHits}).toFixed(2));
     if(metric.reaction==='stellarSwirl')notes.push('对应辉映与星扩散现场已成立');
-    if(metric.reaction?.startsWith('lunar'))notes.push('对应月反应场景及本次攻击资源已具备；默认单人满足满辉天赋前提');
+    if(metric.reaction?.startsWith('lunar'))notes.push('对应月反应场景及本次攻击资源已具备'+(teamOnly?'，满辉资格按实际队伍判断':'；默认单人满足满辉天赋前提'));
     if(config.character==='桑多涅'&&metric.id.endsWith('-q'))notes.push('聚能光束清除'+s.sandroneTactics+'层改进战术，倍率×'+(1+.1*s.sandroneTactics).toFixed(1)+'；10层在0命也可取得');
     if(config.character==='魈')notes.push('满Q增伤5层；连续E增伤按当前充能与敌人数限制，未增加E次数');
     if(config.character==='胡桃'&&config.cons>=6&&s.ownBuffMode==='full')notes.push('C6按已触发后的10秒窗口计算，当前生命49%');
     if(config.character==='八重神子'&&config.cons>=1&&s.ownBuffMode==='full')notes.push('C1按已先触发超导/星超导后的10秒状态；普通雷伤也可受益，普通杀生樱指标不暗中替换为强化落雷');
     if(config.character==='流浪者'&&s.ownBuffMode==='full')notes.push('预设E已接触火、冰两种元素，可来自环境或附着；不增加队伍人数或元素共鸣');
     if(config.character==='丝柯克'){
-      notes.push(s.talentMode==='benchmark'?'默认单人满足诸武相授（E+1）和死河渡断'+(s.states.skirkStacks??3)+'层；组队受成员资格限制':'死河与战技加级按实际资格');
+      notes.push(!teamOnly&&s.talentMode==='benchmark'?'默认单人满足诸武相授（E+1）和死河渡断'+(s.states.skirkStacks??3)+'层；组队受成员资格限制':'死河渡断和战技加级按实际队友资格判断。');
       const info=skirkResourceInfo(config);notes.push(metric.id.startsWith('skirk-q')?'普通Q灭：施放时'+s.skirkSerpent+'蛇之狡谋，实际计入超额'+Math.max(0,Math.min(info.extraCap,Number(s.skirkSerpent)-50))+'点（上限'+info.extraCap+'）；不混入特殊Q尽的普攻增益':s.skirkSpecialQActive?s.skirkWitherActive!==false?'已施放特殊Q尽并吸收'+s.skirkRifts+'枚裂隙；本指标7次命中均满足凋尽生效条件':'已施放特殊Q尽，但凋尽增伤已结束；C2状态单独保留':'未计特殊Q尽增益');
       if(metric.id.startsWith('skirk-q'))notes.push('从0狡谋长E：'+info.fromE+'＋'+info.requiredRifts+'枚裂隙×8＝'+info.defaultSerpent+'；满倍率门槛'+info.threshold+'，C0/C1与C2以上都需要3枚裂隙。');
     }

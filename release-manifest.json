@@ -1,15 +1,15 @@
 {
-  "sourceCommit": "cd85744dee74a34ace6ccba34fead2b82ecf75b1",
+  "sourceCommit": "1ff23bd5a7a33aaca16c5b084d0d0e444e308b59",
   "files": [
     {
       "path": "app.js",
-      "bytes": 122056,
-      "sha256": "8c75a63f81fa978ea47ac01198c9d16df90397936c53a5cc7b374a95d7c86903"
+      "bytes": 119042,
+      "sha256": "46786f58d52fa3ff140db5009cfe7911fe6f1b47eb15edbf272471cd5ae5721d"
     },
     {
       "path": "appearance.css",
-      "bytes": 6728,
-      "sha256": "1ac663dbff540ca0536265ba5ac83e856e6fe9fdeae17de3db6088d27bf634bc"
+      "bytes": 9477,
+      "sha256": "4a8e1b088004eb51194df73b3a28ffdccf108de4db18bfa8ce36ad93644b1aad"
     },
     {
       "path": "appearance.js",
@@ -38,8 +38,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 1950,
-      "sha256": "1c7d597a58e0becd401daa0d5919c1ca6d80c91ca0746f8c4a4856485604b70d"
+      "bytes": 1953,
+      "sha256": "a84295cd5468f0dc68fc27661b9dc41858c7f34d0235d9ef2836af44bdb0a7bf"
     },
     {
       "path": "mechanisms.js",
@@ -48,8 +48,8 @@
     },
     {
       "path": "metrics.js",
-      "bytes": 40673,
-      "sha256": "515ccaf218c82ddde178e1213d97387681e201d7f1e8fbc46280c7dd6c2f5da9"
+      "bytes": 40930,
+      "sha256": "b18822496450b3ddc15646de204084f32e38c997da4940bcbae0ab65299fe99c"
     },
     {
       "path": "panel-import.js",
@@ -98,8 +98,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14898455,
-      "sha256": "ffd23aaeabe0f4c855eac1be5b63f7aa476fc5f4c020cb5b0719d672f3f64c2a"
+      "bytes": 14897755,
+      "sha256": "48087f461403d14382fc786e34dfcebdd380aabd42f342526a513c99fa2e572c"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
@@ -108,8 +108,8 @@
     },
     {
       "path": "USER_GUIDE.html",
-      "bytes": 32901,
-      "sha256": "4a2003e6b99cfa64b848c1b371c4c3df120b51d62399776093bd56287bc8b529"
+      "bytes": 32125,
+      "sha256": "eec2d64542e4d349a498f640e5680f7bb78a6b17ca63e57f80695fc3a78d139f"
     },
     {
       "path": "v72.js",

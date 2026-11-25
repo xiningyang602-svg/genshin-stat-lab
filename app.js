@@ -89,7 +89,7 @@
     return '<label class="check-row'+(unavailable?' disabled-state':'')+'"><input type="checkbox" data-path="'+path+'"'+(!unavailable&&(preset||value)?' checked':'')+(preset||unavailable?' disabled':'')+'>'+esc(label)+(unavailable?'（未解锁，需'+need+'命；不计入）':preset?'（满效果预设）':'')+'</label>';
   }
   function elementChecks(label,path){const selected=get(path)||[];return '<fieldset class="element-picker"><legend>'+esc(label)+'</legend>'+['pyro','hydro','cryo','electro','anemo','geo','dendro'].map(k=>'<label><input type="checkbox" data-list-path="'+esc(path)+'" data-list-value="'+k+'"'+(selected.includes(k)?' checked':'')+'>'+E.ELEMENT[k]+'</label>').join('')+'</fieldset>';}
-  function card(title,body,{detail=false,open=false,tag='',stateKey=title}={}){if(tab==='weapons')stateKey='weapons:'+stateKey;const expanded=openedCards.get(stateKey)??(tab==='weapons'&&title==='指标条件与装备效果'?false:open);return detail?'<details class="card details-card" data-card-title="'+esc(stateKey)+'"'+(expanded?' open':'')+'><summary>'+esc(title)+'</summary><div class="card-body">'+body+'</div></details>':'<section class="card"><div class="card-head"><h3>'+esc(title)+'</h3></div><div class="card-body">'+body+'</div></section>';}
+  function card(title,body,{detail=false,open=false,stateKey=title}={}){if(tab==='weapons')stateKey='weapons:'+stateKey;const expanded=openedCards.get(stateKey)??open;return detail?'<details class="card details-card" data-card-title="'+esc(stateKey)+'"'+(expanded?' open':'')+'><summary>'+esc(title)+'</summary><div class="card-body">'+body+'</div></details>':'<section class="card"><div class="card-head"><h3>'+esc(title)+'</h3></div><div class="card-body">'+body+'</div></section>';}
   const mainOptions={sands:['atkPct','hpPct','defPct','mastery','recharge'],goblet:['dmg',...['pyro','hydro','cryo','electro','anemo','geo','dendro'].map(k=>'dmg_'+k),'phy','atkPct','hpPct','defPct','mastery'],circlet:['cpct','cdmg','atkPct','hpPct','defPct','mastery','heal']};
   function skillOptions(selected) {
     let html=R[config.character].details.map((d,index)=>({d:E.resolveDetail(config,index),index})).filter(({d})=>E.isDamageDetail(d)).map(({d,index})=>option(index,(d.cons?'C'+d.cons+' · ':'')+d.title,selected)).join('');
@@ -156,12 +156,44 @@
       if(type==='elements')return '';
       return field(label,path,'number',{min:type,max,step:1,value});
     }).join('');
-    return card('指标条件与装备效果','<div class="fields">'+field('单人角色天赋前提','metricSettings.talentMode','text',{wide:true,options:[['benchmark','默认满足组队触发资格'],['actual','严格按实际单人资格']]})+field('角色自身增益','metricSettings.ownBuffMode','text',{wide:true,options:[['full','默认合法满效果'],['custom','自定义自身增益']]})+field('圣遗物效果','metricSettings.artifactMode','text',{wide:true,options:[['full','默认满层 / 已触发'],['manual','使用自定义状态']]})+field('武器被动','metricSettings.weaponMode','text',{wide:true,options:[['full','默认满足条件并满层'],['manual','使用自定义状态']]})+field('敌人等级','enemy.level','number',{min:1,max:200,step:1})+field('附近敌人数（影响辅助层数）','enemy.count','number',{value:config.enemy.count??1,min:1,max:20,step:1})+field('敌人基础抗性 %','enemy.resistance')+extra+'</div><p class="help">单人默认满足角色自身天赋需要的满辉、魔导等组队资格，仍不计队友直接增益和元素共鸣；组队按真实成员判断。绝缘仍读取实际充能。详细条件的手动修改优先。</p><details class="method-details"><summary>调整角色与装备的具体状态</summary><div class="fields">'+field('当前生命比例 %','metricSettings.states.currentHpPct','number',{min:0,max:100,value:v.currentHpPct??config.conditions.currentHpPct})+fields+'</div>'+check('已完成角色魔女课业','metricSettings.states.homework',s.states.homework??(s.talentMode==='benchmark'&&window.GTeam?.HEX.includes(config.character)?true:config.conditions.homework))+'<p class="help">所选反应指标的必要辉映和攻击分支由指标决定；队友实际属性与增益在队友区域设置。</p></details>',{detail:true,open:true});
+    const controls=field('角色自身增益','metricSettings.ownBuffMode','text',{wide:true,options:[['full','默认合法满效果'],['custom','自定义自身增益']]})+
+      field('圣遗物效果','metricSettings.artifactMode','text',{wide:true,options:[['full','默认满层 / 已触发'],['manual','使用自定义状态']]})+
+      field('武器被动','metricSettings.weaponMode','text',{wide:true,options:[['full','默认满足条件并满层'],['manual','使用自定义状态']]})+
+      field('敌人等级','enemy.level','number',{min:1,max:200,step:1})+
+      field('附近敌人数（影响辅助层数）','enemy.count','number',{value:config.enemy.count??1,min:1,max:20,step:1})+
+      field('敌人基础抗性 %','enemy.resistance')+extra;
+    const hp=field('当前生命比例 %','metricSettings.states.currentHpPct','number',{min:0,max:100,value:v.currentHpPct??config.conditions.currentHpPct});
+    const homework=window.GTeam?.HEX.includes(config.character)
+      ?check('已完成角色魔女课业','metricSettings.states.homework',s.states.homework??(s.talentMode==='benchmark'||config.conditions.homework)):'';
+    return card('指标条件与装备效果',
+      `<div class="fields">${controls}</div>
+      <details class="method-details"><summary>调整角色与装备的具体状态</summary>
+        <div class="fields">${hp}${fields}</div>${homework}
+      </details>`,{detail:true,stateKey:'metric-settings:'+tab});
+  }
+  function teamResult(mode,id=goal){
+    const result=results[mode]?.[id]?.team;
+    if(!result||result.error||mode!=='optimize'||config.allocationView!=='material')return result;
+    if(result.material&&!result.material.error)return result.material;
+    return {error:result.material?.error||'尚未找到可实现方案。'};
   }
   function metricOverview(mode){
-    const rows=M.selected(config).filter(m=>results[mode]?.[m.id]);if(!rows.length)return '';
-    const cell=(r,k)=>r?.error?'<span class="muted">条件不满足</span>':r?fmt((mode==='marginal'?r.base:r)?.[k]):'—';
-    return card(mode==='optimize'?'各指标独立最优 · 伤害对照':'当前圣遗物 · 各指标伤害','<div class="table-wrap"><table class="metric-overview"><thead><tr><th>指标</th><th>单人期望</th><th>单人暴击</th><th>组队期望</th><th>组队暴击</th></tr></thead><tbody>'+rows.map(m=>{const d=results[mode][m.id];return '<tr class="'+(goal===m.id?'selected':'')+'"><td><button data-goal="'+esc(m.id)+'">'+esc(m.title)+'</button></td><td>'+cell(d.solo,'total')+'</td><td>'+cell(d.solo,'critical')+'</td><td>'+cell(d.team,'total')+'</td><td>'+cell(d.team,'critical')+'</td></tr>';}).join('')+'</tbody></table></div><p class="help">'+(mode==='optimize'?'各指标分别优化，分配可能不同。':'各指标使用同一份已输入圣遗物属性。')+'暴击栏按可暴击段全部暴击计算。</p>');
+    const metrics=M.selected(config);
+    if(!metrics.some(metric=>teamResult(mode,metric.id)))return '';
+    const rows=metrics.map(metric=>{
+      const result=teamResult(mode,metric.id),damage=mode==='marginal'?result?.base:result;
+      const cells=result?.error?'<td colspan="2" class="muted">条件不满足</td>':
+        `<td>${damage?fmt(damage.total):'—'}</td><td>${damage?fmt(damage.critical):'—'}</td>`;
+      return `<tr class="${goal===metric.id?'selected':''}">
+        <th scope="row"><button type="button" data-goal="${esc(metric.id)}" aria-pressed="${goal===metric.id}">${esc(metric.title)}</button></th>
+        ${cells}
+      </tr>`;
+    }).join('');
+    return card(mode==='optimize'?'各指标独立最优':'当前装备 · 各指标伤害',
+      `<table class="metric-overview">
+        <thead><tr><th scope="col">指标</th><th scope="col">期望伤害</th><th scope="col">全暴击伤害</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`);
   }
   const buffFields={...E.LABELS,aDmg:'普攻伤害加成 %',a2Dmg:'重击伤害加成 %',a3Dmg:'下落伤害加成 %',eDmg:'战技伤害加成 %',qDmg:'爆发伤害加成 %',aPlus:'普攻附加基础伤害',a2Plus:'重击附加基础伤害',a3Plus:'下落附加基础伤害',ePlus:'战技附加基础伤害',qPlus:'爆发附加基础伤害',aCpct:'普攻暴击率 %',aCdmg:'普攻暴击伤害 %',a2Cpct:'重击暴击率 %',a2Cdmg:'重击暴击伤害 %',eCpct:'战技暴击率 %',eCdmg:'战技暴击伤害 %',qCpct:'爆发暴击率 %',qCdmg:'爆发暴击伤害 %',enemyDef:'减防 %',enemyIgnore:'无视防御 %',kx:'全元素/物理减抗 %',res_pyro:'火减抗 %',res_hydro:'水减抗 %',res_cryo:'冰减抗 %',res_electro:'雷减抗 %',res_geo:'岩减抗 %',res_anemo:'风减抗 %',res_dendro:'草减抗 %',res_physical:'物理减抗 %',multi:'独立倍率加成 %',vaporize:'蒸发反应增伤 %',melt:'融化反应增伤 %',aggravate:'超激化反应增伤 %',spread:'蔓激化反应增伤 %',bloom:'绽放反应增伤 %',hyperBloom:'超绽放反应增伤 %',burgeon:'烈绽放反应增伤 %',swirl:'扩散反应增伤 %',lunarCharged:'月感电增伤 %',lunarBloom:'月绽放增伤 %',lunarCrystallize:'月结晶增伤 %',stellarConduct:'星超导增伤 %',stellarSwirl:'星扩散增伤 %',stellarVortex:'星辉冰旋增伤 %',fypct:'月/星基础伤害提升 %',fyplus:'月/星专属固定基础伤害',elevated:'月/星擢升 %',lunarChargedBase:'月感电基础伤害提升 %',lunarBloomBase:'月绽放基础伤害提升 %',lunarCrystallizeBase:'月结晶基础伤害提升 %',stellarConductBase:'星超导基础伤害提升 %',stellarSwirlBase:'星扩散基础伤害提升 %',stellarConductFlat:'星超导专属固定增伤',stellarSwirlFlat:'星扩散专属固定增伤'};
   buffFields.dmg='通用伤害加成 %（含物理）';
@@ -291,7 +323,10 @@
     return card('间接月/星反应贡献人','<p class="panel-intro">仅对雷云、月笼与旋涡等间接反应使用。填写实际参与该反应的其他角色最终战斗数据；未填写者按0贡献处理，不能代表完整队伍反应伤害。</p>'+field('间接反应目标','conditions.reactionOwnership','text',{wide:true,options:[['owner','只计算主角色的加权贡献'],['team','计算该间接反应的全队总伤害']]})+(config.contributors||[]).map((p,i)=>'<div class="contributor"><div class="fields">'+[['level','等级'],['mastery','精通'],['cpct','暴击率 %'],['cdmg','暴击伤害 %'],['bonus','该反应增伤 %'],['baseBonus','该反应基础提升 %'],['flat','专属固定增伤'],['elevation','擢升 %']].map(([k,l])=>field(l,'contributors.'+i+'.'+k)).join('')+'</div><button class="soft-btn" data-remove-contributor="'+i+'" style="margin-top:8px">删除贡献人</button></div>').join('')+'<button class="add-btn" data-action="add-contributor"'+((config.contributors||[]).length>=3?' disabled':'')+'>＋ 添加贡献人（最多3名）</button><p class="help">每次暴击组合先按完整伤害排序，再按 0.6 / 0.3 / 0.05 / 0.05 加权。期望枚举最多16种组合；星扩散采用独立暴击假设。队友直接技能伤害不混入本角色循环。</p>',{detail:true});
   }
   function goalSwitch(){return '<div class="goal-switch metric-switch">'+M.selected(config).map(m=>'<button data-goal="'+esc(m.id)+'" class="'+(goal===m.id?'active':'')+'">'+esc(m.title)+'</button>').join('')+'</div>';}
-  function emptyResult(mode) {return '<section class="card empty"><div class="empty-symbol">✧</div><h3>'+(mode==='marginal'?'把每一个词条，放在更有收益的地方':'找到这套配置下的词条分配')+'</h3><p>'+(mode==='marginal'?'输入当前面板，比较十种副词条在单人、组队和所选伤害指标下的提升率。':'确定角色、命座、武器和三个主词条，再按有效副词条预算比较单人和组队结果。')+'</p><div class="empty-steps"><span><b>1</b>确定配置</span><span><b>2</b>选择指标</span><span><b>3</b>比较收益</span></div></section>';}
+  function emptyResult(mode) {
+    const message=mode==='marginal'?'填写常驻面板或导入圣遗物截图，选择队友和伤害指标后开始计算。':'填写有效副词条预算，选择队友和伤害指标后开始计算。';
+    return `<section class="card empty"><h3>等待计算</h3><p>${message}</p></section>`;
+  }
   function critPanel(r){
     const reference=r.referenceCrit||r.panel,details=r.details||[];
     const calls=details.flatMap(d=>d.calls||[]).filter(c=>c.avg>0&&['normal','amplifying','additive','direct','indirect'].includes(c.kind)&&Number.isFinite(c.cr));
@@ -308,30 +343,61 @@
     if(body&&calls.length===6){const hits=calls.map(c=>c.hit),same=hits.slice(0,5).every(n=>Math.abs(n-hits[0])<.01);html+='<p class="help skirk-hits">Q灭本体逐段暴击：'+(same?'前5段各 <strong class="num">'+fmt(hits[0])+'</strong>；末段 <strong class="num">'+fmt(hits[5])+'</strong>':hits.map(n=>fmt(n)).join(' / '))+'。</p>';}
     return html;
   }
-  function resultSummary(s,r) {return '<section class="card result-card '+(s==='team'?'team':'')+'"><div class="result-topline"><span>'+(s==='solo'?'单人 · 仅角色自身增益':'组队 · 实际选择的队伍')+'</span><span class="scope-chip">期望伤害</span></div><div class="damage-big num">'+fmt(r.total)+'<small>'+esc(activeMetric()?.title||'所选伤害指标')+'</small></div><div class="critical-value">全暴击伤害 <strong class="num">'+fmt(r.critical)+'</strong></div>'+skirkResultState(r)+critPanel(r)+'<div class="result-bottom"><span>沙 '+E.LABELS[r.mains.sands]+' / 杯 '+E.LABELS[r.mains.goblet]+' / 冠 '+E.LABELS[r.mains.circlet]+'</span></div></section>';}
-  function allocationCard(data) {
-    const keys=[...new Set([...Object.keys(data.solo?.allocation||{}),...Object.keys(data.team?.allocation||{})])].filter(k=>(data.solo?.allocation[k]||data.team?.allocation[k]||0)>0);
-    const max=Math.max(1,...keys.flatMap(k=>[data.solo?.allocation[k]||0,data.team?.allocation[k]||0]));
-    return card('有效副词条分配','<div class="allocation-legend"><span><i class="legend-dot"></i>单人</span><span><i class="legend-dot team"></i>组队</span><span style="margin-left:auto">单位：等效词条</span></div>'+keys.map(k=>'<div class="allocation-row"><span>'+E.LABELS[k]+'</span><div class="bar-duo"><div class="bar-track"><div class="bar-fill" style="width:'+100*(data.solo?.allocation[k]||0)/max+'%"></div></div><div class="bar-track"><div class="bar-fill team" style="width:'+100*(data.team?.allocation[k]||0)/max+'%"></div></div></div><span class="roll-count num">'+fmt(data.solo?.allocation[k]||0,2)+'</span><span class="roll-count team num">'+fmt(data.team?.allocation[k]||0,2)+'</span></div>').join('')+'<div class="divider"></div><p class="help">'+(data.team?'组队':'单人')+'计算时属性 · 含已生效增益</p><div class="stat-pills">'+Object.entries((data.team||data.solo).panel).filter(([k])=>['hp','atk','def','mastery'].includes(k)).map(([k,n])=>'<span class="stat-pill">'+({hp:'生命',atk:'攻击',def:'防御',mastery:'精通'})[k]+' '+fmt(n)+'</span>').join('')+'</div><p class="help">固定当前配置的分配，单位为等效词条。</p>',{tag:'ALLOCATION'});
+  function resultSummary(result,mains){
+    return `<section class="card result-card team">
+      <h3>组队伤害</h3>
+      <p class="team-metric-title">${esc(activeMetric()?.title||'所选伤害指标')}</p>
+      <dl class="team-damage-summary">
+        <div><dt>期望伤害</dt><dd class="damage-big num">${fmt(result.total)}</dd></div>
+        <div><dt>全暴击伤害</dt><dd class="team-critical-damage num">${fmt(result.critical)}</dd></div>
+      </dl>
+      ${skirkResultState(result)}${critPanel(result)}
+      <div class="result-bottom">沙 ${esc(E.LABELS[mains?.sands])} / 杯 ${esc(E.LABELS[mains?.goblet])} / 冠 ${esc(E.LABELS[mains?.circlet])}</div>
+    </section>`;
   }
-  function settlementCaption(data,optimized){
-    const result=optimized?data.team:data.team?.base,changes=optimized?data.team?.marginal:data.team?.changes,view=window.GSettlement?.describe(result,changes);
+  function allocationCard(result) {
+    const entries=Object.entries(result.allocation).sort((a,b)=>b[1]-a[1]);
+    const total=entries.reduce((sum,[,value])=>sum+value,0);
+    const max=Math.max(1,...entries.map(([,value])=>value));
+    const rows=entries.map(([key,value])=>`<div class="allocation-row">
+      <span>${esc(E.LABELS[key])}</span>
+      <div class="bar-track" aria-hidden="true"><div class="bar-fill team" style="width:${100*value/max}%"></div></div>
+      <span class="roll-count team num">${fmt(value,2)}</span>
+    </div>`).join('');
+    return card('有效副词条分配',`<div class="allocation-legend">合计 <strong class="num">${fmt(total,2)}</strong> 等效词条</div>
+      <div class="allocation-card">${rows||'<p class="muted">本次未分配副词条。</p>'}</div>`);
+  }
+  function settlementCaption(result,changes){
+    const view=window.GSettlement?.describe(result,changes);
     if(!view)return '';
     const value=x=>{const number=n=>fmt(n,x.unit==='×'?2:1),different=Math.abs(x.max-x.min)>.0001;return (x.unit==='×'?'×':'')+number(x.min)+(different?'–'+(x.unit==='×'?'×':'')+number(x.max):'')+(x.unit==='×'?'':x.unit);};
     const stats=items=>items.map(x=>'<span class="settlement-stat" data-settlement-stat="'+esc(x.key)+'">'+esc(x.label)+' <strong class="num">'+value(x)+'</strong></span>').join('');
     const single=view.groups.length===1,body=single?stats([...view.shared,...view.groups[0].stats]):stats(view.shared)+view.groups.map(group=>'<div class="settlement-group"><span>'+esc(group.label)+'：</span>'+stats(group.stats)+'</div>').join('');
     return '<div class="settlement-caption" role="note"><span class="settlement-label">组队伤害结算属性（含面板外加成）：</span>'+body+(view.hasRange?'<span class="settlement-range-note">不同伤害段采用值不同时显示范围。</span>':'')+'</div>';
   }
-  function gainTable(data,optimized=false) {
-    const s=optimized?data.solo?.marginal:data.solo?.changes,t=optimized?data.team?.marginal:data.team?.changes;
-    if(!s&&!t)return '';
-    const map=(rows)=>Object.fromEntries((rows||[]).map(r=>[r.key,r]));const sm=map(s),tm=map(t);
-    const all=[...new Set([...(t||[]),...(s||[])].map(x=>x.key))].filter(k=>Math.abs(sm[k]?.rate||0)>1e-9||Math.abs(tm[k]?.rate||0)>1e-9).sort((a,b)=>(tm[b]?.rawRate??sm[b]?.rawRate)-(tm[a]?.rawRate??sm[a]?.rawRate));
-    const inactive=Object.keys(E.ROLLS).filter(k=>!all.includes(k));
-    const max=Math.max(.01,...[...(s||[]),...(t||[])].map(r=>r.rate));
-    const top=all[0];
-    const cell=r=>r?'<strong>'+pct(r.rawRate)+'</strong><small class="gain-equivalent">每等效有效条 '+pct(r.rate)+'</small>':'—';
-    return card(optimized?'参考分配后，再强化一次':'当前面板 · 一次平均强化的提升',settlementCaption(data,optimized)+'<div class="table-wrap"><table class="gain-table"><thead><tr><th>副词条类型</th><th>实际平均强化值</th><th style="text-align:right">单人 / 强化一次</th><th style="text-align:right">组队 / 强化一次</th></tr></thead><tbody>'+all.map(k=>{const r=tm[k]||sm[k];return '<tr><td>'+(k===top?'<span class="rank-star">✧</span>':'')+E.LABELS[k]+'</td><td class="unit num">+'+fmt(r.rawIncrement??r.increment,4)+(k.endsWith('Pct')||['cpct','cdmg','recharge'].includes(k)?'%':'')+(k.endsWith('Plus')?'<br>折 '+fmt(r.rawCost,4)+' 有效条':'')+'</td><td class="rate num">'+cell(sm[k])+'<div class="rate-bar"><div style="width:'+Math.max(0,100*(sm[k]?.rate||0)/max)+'%"></div></div></td><td class="rate team num">'+cell(tm[k])+'<div class="rate-bar team"><div style="width:'+Math.max(0,100*(tm[k]?.rate||0)/max)+'%"></div></div></td></tr>';}).join('')+'</tbody></table></div><p class="help">粗体：实际强化一次的提升；小字：折算为一条有效词条的提升。</p>'+(inactive.length?'<p class="help">当前目标无收益或已封顶：'+inactive.map(k=>E.LABELS[k]).join('、')+'。</p>':'')+'<p class="help">提升率 = 追加后的目标期望伤害 ÷ 当前目标期望伤害 − 1。此表比较追加属性；换掉现有属性时，两边的净变化需要一起计算。</p>',{tag:'MARGINAL GAIN'});
+  function gainTable(result,changes,active,optimized=false) {
+    const relevant=new Set(active||[]);
+    const rows=(changes||[]).filter(row=>Number.isFinite(row.rawRate)&&
+      (relevant.has(row.key)||Math.abs(row.rawRate)>1e-9||Math.abs(row.rate)>1e-9))
+      .sort((a,b)=>b.rawRate-a.rawRate);
+    const max=Math.max(.01,...rows.map(row=>row.rawRate));
+    const body=rows.map(row=>{
+      const key=row.key,unit=key.endsWith('Pct')||['cpct','cdmg','recharge'].includes(key)?'%':'';
+      const equivalent=key.endsWith('Plus')?`<br>折 ${fmt(row.rawCost,4)} 有效条`:'';
+      const width=Math.max(0,100*row.rawRate/max);
+      return `<tr><th scope="row">${esc(row.name)}</th>
+        <td class="unit num">+${fmt(row.rawIncrement??row.increment,4)}${unit}${equivalent}</td>
+        <td class="rate team num"><strong>${pct(row.rawRate)}</strong>
+          <small class="gain-equivalent">每等效有效条 ${pct(row.rate)}</small>
+          <div class="rate-bar team" aria-hidden="true"><div style="width:${width}%"></div></div>
+        </td></tr>`;
+    }).join('');
+    const table=rows.length?`<table class="gain-table">
+      <thead><tr><th scope="col">副词条类型</th><th scope="col">平均强化值</th><th scope="col">组队提升率</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`:'<p class="muted">此指标追加词条无伤害提升。</p>';
+    return card(optimized?'参考分配后，再强化一次':'当前面板 · 一次平均强化的提升',
+      settlementCaption(result,changes)+table);
   }
   function callFormula(c){
     if(['indirect','transformative'].includes(c.kind))return '<p>'+esc(c.rx)+'：期望 '+fmt(c.avg,2)+'；全暴击/指定暴击规则 '+fmt(c.hit,2)+'</p>';
@@ -342,43 +408,69 @@
     const label=M.names[c.rx]||({none:'普通伤害',vaporize:'蒸发',melt:'融化',aggravate:'超激化',spread:'蔓激化'})[c.rx]||c.rx;
     return '<p>'+esc(label)+'：'+formula+'<br>暴击 × '+fmt(crit,4)+' = '+fmt(c.hit,2)+'；期望 × '+fmt(expected,6)+' = '+fmt(c.avg,2)+(Number.isFinite(c.independentMultiplier)&&c.independentMultiplier!==1?'<br>上方基础区已包含独立倍率 × '+fmt(c.independentMultiplier,4):'')+'</p>';
   }
-  function traceCard(data,optimized=true) {
-    return card('计算依据与实际增益',Object.entries(data).map(([scope,r])=>{
-      const v=optimized?r:r.base;
-      return '<details class="method-details"><summary>'+({solo:'单人',team:'组队'})[scope]+' · 技能分项与伤害乘区</summary>'+critPanel(v)+v.details.map(d=>'<details class="trace-row"><summary><span>'+esc(d.title)+' × '+fmt(d.count,2)+'</span><span class="num">'+fmt(d.total)+'</span></summary><div class="table-wrap"><table><thead><tr><th>伤害类型</th><th>基础伤害</th><th>精通</th><th>计算暴击率</th><th>计算暴伤</th><th>防御乘区</th><th>抗性乘区</th></tr></thead><tbody>'+d.calls.map(c=>'<tr><td>'+esc(c.rx)+'</td><td>'+fmt(c.base,2)+'</td><td>'+fmt(c.em,1)+'</td><td>'+fmt(c.cr,1)+'%</td><td>'+fmt(c.cd,1)+'%</td><td>'+(c.kind==='direct'||c.kind==='indirect'||c.kind==='transformative'?'不适用':fmt(c.def,4))+'</td><td>'+fmt(c.res,4)+'</td></tr>').join('')+'</tbody></table></div><div class="call-formulas">'+d.calls.map(callFormula).join('')+'</div><p class="help">实际天赋：普攻 '+esc(d.talentLevels?.a??'—')+' / 战技 '+esc(d.talentLevels?.e??'—')+' / 爆发 '+esc(d.talentLevels?.q??'—')+'</p><p class="help">实际技能参数</p><pre>'+esc(JSON.stringify(d.params,null,2))+'</pre><details><summary>查看角色公式函数</summary><pre>'+esc(d.source)+'</pre></details></details>').join('')+'<p class="help">已应用的自身/武器/套装增益</p><ul>'+v.buffs.map(b=>'<li>'+esc(b)+'</li>').join('')+'</ul></details>';
-    }).join('')+'<details class="method-details"><summary>模型、词条折算与搜索边界</summary><p>花与羽毛固定，沙杯冠按输入选择。优化按有效等效副词条预算进行；每次改属性会重新计算所有自身转化和封顶。</p><p>每个伤害指标使用固定的攻击分支和命中段数。期望伤害用于优化，暴击栏为所有可暴击段均暴击时的总值。反应现场与装备预设会列明；未模拟产球、动作耗时、走位或敌人时序。</p><p>搜索使用多起点优化和属性之间的分配扫描。结果称为“搜索最优”，不能把数值搜索当成已证明的严格全局最优。实际五件圣遗物还有副词条种类与强化限制，等效分配主要用于判断属性方向。</p></details>',{detail:true});
-  }
-  function substatScoreCard(data) {
-    const blocks=Object.entries(data).map(([scope,result])=>{
-      const score=result.substatScore,name=scope==='solo'?'单人':'组队';
-      if(!score)return '';
-      const count=Number.isFinite(score.count)?'<p class="roll-count-line">有效副词条 <strong class="num">'+(score.estimated?'约 ':'')+fmt(score.count,2)+'</strong> 条</p>':'';
-      if(score.error)return '<section class="roll-score"><h4>'+name+'</h4>'+count+'<p class="help">'+esc(score.error)+'</p></section>';
-      const rows=score.active.filter(key=>(score.allocation[key]||score.optimum.allocation[key]||0)>0).map(key=>
-        '<tr><th scope="row">'+esc(E.LABELS[key])+'</th><td>'+fmt(score.allocation[key]||0,2)+'</td><td>'+fmt(score.optimum.allocation[key]||0,2)+'</td></tr>').join('');
-      return '<section class="roll-score" data-score-scope="'+scope+'"><h4>'+name+'</h4>'+count+
-        '<p class="roll-score-percent"><strong class="num">'+fmt(score.percentage,2)+'%</strong><span>达到同词条数最优参考</span></p>'+
-        '<p class="roll-score-damage">最优参考期望伤害 <strong class="num">'+fmt(score.optimum.total)+'</strong></p>'+
-        '<details class="method-details"><summary>查看当前与最优分配</summary><table class="data-table roll-score-table"><thead><tr><th>副属性</th><th>当前条数</th><th>最优条数</th></tr></thead><tbody>'+rows+'</tbody></table></details></section>';
+  function traceCard(result) {
+    const metric=activeMetric();
+    const conditions=metric&&!dirty?`<details class="method-details"><summary>本次指标条件</summary>
+      <ul>${M.describe(config,metric,'team').map(note=>`<li>${esc(note)}</li>`).join('')}</ul>
+    </details>`:'';
+    const details=result.details.map(detail=>{
+      const hits=detail.calls.map(hit=>`<tr><td>${esc(hit.rx)}</td><td>${fmt(hit.base,2)}</td>
+        <td>${fmt(hit.em,1)}</td><td>${fmt(hit.cr,1)}%</td><td>${fmt(hit.cd,1)}%</td>
+        <td>${['direct','indirect','transformative'].includes(hit.kind)?'不适用':fmt(hit.def,4)}</td><td>${fmt(hit.res,4)}</td></tr>`).join('');
+      const levels=detail.talentLevels||{};
+      return `<details class="trace-row"><summary><span>${esc(detail.title)} × ${fmt(detail.count,2)}</span><span class="num">${fmt(detail.total)}</span></summary>
+        <div class="table-wrap"><table><thead><tr><th>伤害类型</th><th>基础伤害</th><th>精通</th>
+          <th>计算暴击率</th><th>计算暴伤</th><th>防御乘区</th><th>抗性乘区</th></tr></thead><tbody>${hits}</tbody></table></div>
+        <div class="call-formulas">${detail.calls.map(callFormula).join('')}</div>
+        <p class="help">实际天赋：普攻 ${esc(levels.a??'—')} / 战技 ${esc(levels.e??'—')} / 爆发 ${esc(levels.q??'—')}</p>
+        <p class="help">实际技能参数</p><pre>${esc(JSON.stringify(detail.params,null,2))}</pre>
+        <details><summary>查看角色公式函数</summary><pre>${esc(detail.source)}</pre></details>
+      </details>`;
     }).join('');
-    return blocks?card('有效词条数与分配完成度','<div class="roll-score-grid">'+blocks+'</div><p class="help">占比 = 当前期望伤害 ÷ 同预算连续搜索值。固定现有主属性与装备；常驻面板输入为估算。</p>').replace('class="card"','class="card substat-score-card"'):'';
+    const buffs=result.buffs.map(buff=>`<li>${esc(buff)}</li>`).join('');
+    return card('计算依据与实际增益',`${conditions}
+      <h4>技能分项与伤害乘区</h4>${details}
+      ${buffs?`<h4>自身、武器与套装的生效增益</h4><ul>${buffs}</ul>`:''}
+      <details class="method-details"><summary>词条折算与搜索边界</summary>
+        <p>花与羽毛固定，沙杯冠按输入选择。有效词条按五星平均值折算。</p>
+        <p>最优参考来自多起点连续数值搜索。实际五件圣遗物仍受副词条种类和强化次数限制。</p>
+      </details>`,{detail:true,stateKey:'calculation-details:'+tab});
+  }
+  function substatScoreCard(result) {
+    const score=result.substatScore;
+    if(!score)return '';
+    const title='有效词条数与分配完成度';
+    const count=Number.isFinite(score.count)?`<div><p class="roll-score-label">有效副词条总数</p>
+      <p class="roll-score-number">${score.estimated?'约 ':''}<strong class="num">${fmt(score.count,2)}</strong> 条</p></div>`:'';
+    if(score.error)return card(title,count+`<p class="help">${esc(score.error)}</p>`);
+    const rows=score.active.filter(key=>(score.allocation[key]||score.optimum.allocation[key]||0)>0).map(key=>
+      `<tr><th scope="row">${esc(E.LABELS[key])}</th><td>${fmt(score.allocation[key]||0,2)}</td><td>${fmt(score.optimum.allocation[key]||0,2)}</td></tr>`).join('');
+    return card(title,`<section class="roll-score" data-score-scope="team">
+      <div class="roll-score-metrics">${count}<div>
+        <p class="roll-score-label">达到同词条数最优参考</p>
+        <p class="roll-score-number"><strong class="num">${fmt(score.percentage,2)}%</strong></p>
+      </div></div>
+      <p class="roll-score-damage">当前期望 <strong class="num">${fmt(result.base.total)}</strong>
+        <span>最优参考 <strong class="num">${fmt(score.optimum.total)}</strong></span>
+      </p>
+      <details class="method-details"><summary>查看当前与最优分配</summary>
+        <table class="data-table roll-score-table"><thead><tr><th>副属性</th><th>当前条数</th><th>最优条数</th></tr></thead><tbody>${rows}</tbody></table>
+        <p class="help">同预算对比沿用当前装备及主属性，副词条采用连续搜索。</p>
+      </details>
+    </section>`).replace('class="card"','class="card substat-score-card"');
   }
   function resultContent(mode) {
-    let data=results[mode]?.[goal];
-    if(!data)return emptyResult(mode);
-    if(mode==='optimize'&&config.allocationView==='material')data=Object.fromEntries(Object.entries(data).map(([s,r])=>[s,r.error?r:r.material&&!r.material.error?{...r.material,sourceTheoretical:r.total}:{error:r.material?.error||'尚未找到可实现方案。'}]));
-    const complete=Object.fromEntries(Object.entries(data).filter(([,r])=>!r.error));
-    if(!Object.keys(complete).length)return Object.entries(data).filter(([,r])=>r.error).map(([s,r])=>'<div class="error">'+({solo:'单人',team:'组队'})[s]+'：'+esc(r.error)+'</div>').join('')+emptyResult(mode);
-    let result='';
-    if(mode==='optimize') {
-      result='<div class="result-grid">'+Object.entries(complete).map(([s,r])=>resultSummary(s,r)).join('')+'</div>'+teamReport(complete.team)+allocationCard(complete)+gainTable(complete,true)+traceCard(complete);
-    } else {
-      const target=[...(complete.team||complete.solo).changes].sort((a,b)=>b.rawRate-a.rawRate)[0];
-      result='<div class="recommendation"><strong>当前更值得强化：'+esc(target?.name||'当前无可提升属性')+' · '+pct(target?.rawRate||0)+'</strong><p>针对'+(complete.team?'组队':'单人')+'与'+(activeMetric()?.title||'所选指标')+'目标，追加一次平均强化的收益最高。切换目标后排名可能变化。</p></div>'+teamReport(complete.team)+gainTable(complete)+traceCard(complete,false);
+    const team=teamResult(mode);
+    if(!team)return emptyResult(mode);
+    if(team.error)return `<p class="error" role="alert">${esc(team.error)}</p>`;
+    if(mode==='optimize'){
+      return `<div class="result-grid">${resultSummary(team,team.mains)}</div>`+
+        teamReport(team)+allocationCard(team)+gainTable(team,team.marginal,team.active,true)+traceCard(team);
     }
-    if(mode==='marginal')result='<div class="result-grid">'+Object.entries(complete).map(([s,r])=>resultSummary(s,{...r.base,mains:r.inputMains})).join('')+'</div>'+substatScoreCard(complete)+result;
-    for(const [scope,r]of Object.entries(data))if(r.error)result+='<div class="error">'+({solo:'单人',team:'组队'})[scope]+'：'+esc(r.error)+'</div>';
-    return result;
+    const best=team.changes.reduce((top,row)=>row.rawRate>(top?.rawRate??1e-9)?row:top,null);
+    const recommendation=best?`<div class="recommendation"><strong>当前更值得强化：${esc(best.name)} · ${pct(best.rawRate)}</strong></div>`:'';
+    return `<div class="result-grid">${resultSummary(team.base,team.inputMains)}</div>`+substatScoreCard(team)+recommendation+
+      teamReport(team)+gainTable(team.base,team.changes,team.substatScore?.active)+traceCard(team.base);
   }
   function supportPanelReport(t){
     const p=t?.panelDetails;if(!p||!p.required?.length)return '';
@@ -418,7 +510,7 @@
       const allocationText=allocation.map(([k,n])=>'<span>'+esc(E.LABELS[k])+' <b class="num">'+fmt(n,2)+'</b> 条</span>').join('');
       const max=Math.max(1,...allocation.map(([,n])=>n)),bars=allocation.map(([k,n])=>'<div class="comparison-roll"><span>'+esc(E.LABELS[k])+'</span><div class="bar-track"><div class="bar-fill team" style="width:'+100*n/max+'%"></div></div><b class="num">'+fmt(n,2)+'</b></div>').join('');
       const trace=r.details.map(d=>'<details class="method-details"><summary>'+esc(d.title)+'</summary>'+d.calls.map(callFormula).join('')+'</details>').join('');
-      return '<article class="weapon-result" data-weapon-result="'+index+'"><div class="weapon-result-top"><div><strong>'+esc(row.weapon)+'</strong><small>精炼'+row.refine+'</small></div><span class="num weapon-damage">'+fmt(r.total)+'</span><strong class="num weapon-percent">'+fmt(row.percentage,1)+'%</strong></div><div class="comparison-ratio-track" role="img" aria-label="相对最高期望伤害'+fmt(row.percentage,1)+'%"><span style="width:'+row.percentage+'%"></span></div><div class="comparison-mains"><span>主属性</span>'+labels.map(slot=>'<span>'+names[slot]+' '+esc(E.LABELS[r.mains[slot]])+'</span>').join('')+'</div><div class="comparison-allocation">'+allocationText+'</div><details class="method-details comparison-detail" data-card-title="'+esc(key)+'"'+(openedCards.get(key)?' open':'')+'><summary>分配详情与结算属性</summary><div class="comparison-detail-body">'+settlementCaption({team:r},true)+bars+critPanel(r)+'<p class="help">全暴击伤害 <strong class="num">'+fmt(r.critical)+'</strong> · 合计 '+fmt(Object.values(r.allocation).reduce((a,b)=>a+b,0),2)+' 有效词条</p>'+trace+'</div></details></article>';
+      return '<article class="weapon-result" data-weapon-result="'+index+'"><div class="weapon-result-top"><div><strong>'+esc(row.weapon)+'</strong><small>精炼'+row.refine+'</small></div><span class="num weapon-damage">'+fmt(r.total)+'</span><strong class="num weapon-percent">'+fmt(row.percentage,1)+'%</strong></div><div class="comparison-ratio-track" role="img" aria-label="相对最高期望伤害'+fmt(row.percentage,1)+'%"><span style="width:'+row.percentage+'%"></span></div><div class="comparison-mains"><span>主属性</span>'+labels.map(slot=>'<span>'+names[slot]+' '+esc(E.LABELS[r.mains[slot]])+'</span>').join('')+'</div><div class="comparison-allocation">'+allocationText+'</div><details class="method-details comparison-detail" data-card-title="'+esc(key)+'"'+(openedCards.get(key)?' open':'')+'><summary>分配详情与结算属性</summary><div class="comparison-detail-body">'+settlementCaption(r,r.marginal)+bars+critPanel(r)+'<p class="help">全暴击伤害 <strong class="num">'+fmt(r.critical)+'</strong> · 合计 '+fmt(Object.values(r.allocation).reduce((a,b)=>a+b,0),2)+' 有效词条</p>'+trace+'</div></details></article>';
     }).join('');
     const success=data.rows.filter(row=>row.result);comparisonAudit=Math.max(0,Math.min(comparisonAudit,success.length-1));
     const logs=success.length?teamReport(success[comparisonAudit].result,{prefix:'<div class="field"><label for="comparison-audit">查看武器</label><select id="comparison-audit" data-comparison-audit>'+success.map((row,i)=>option(i,row.weapon+' · 精炼'+row.refine,comparisonAudit)).join('')+'</select></div>',stateKey:'team-report:weapons'}):'';
@@ -451,13 +543,40 @@
     return '<div class="appearance-switch" role="group" aria-label="网站配色">'+appearance.styles.map(({id,label,name})=>
       '<button type="button" data-appearance="'+id+'" title="'+name+'" aria-label="'+name+'" aria-pressed="'+(appearance.current===id)+'">'+label+'</button>').join('')+'</div>';
   }
+  function teamCalculationPage(mode) {
+    const optimized=mode==='optimize';
+    const overview=metricOverview(mode);
+    const status=busy?'正在计算…':dirty?'配置已变化，请重新计算':'';
+    const canExport=M.selected(config).some(metric=>{const r=teamResult(mode,metric.id);return r&&!r.error;});
+    const sidebar=characterCard()+(optimized?'':panelCard())+artifactsCard()+
+      (optimized?budgetCard():'')+metricsCard()+metricSettingsCard()+teammatesCard()+manualBuffCard()+buffsCard()+contributorsCard();
+    return `<div class="layout">
+      <aside class="sidebar">${sidebar}</aside>
+      <section class="results team-results${dirty?' stale':''}">
+        <div class="results-top">
+          <h3>${optimized?'组队最优分配':'组队词条收益'}</h3>
+          <div class="team-result-actions">
+            <button type="button" class="soft-btn" data-action="csv"${!canExport||dirty||busy?' disabled':''}>导出结果</button>
+            <button type="button" class="primary" data-action="calculate"${busy?' disabled':''}>
+              ${busy?'计算中…':optimized?'计算组队最优':'计算词条收益'}
+            </button>
+          </div>
+        </div>
+        <p class="status-msg" role="status">${status}</p>
+        ${busy?'<div class="progress"><div style="width:'+progress+'%"></div></div>':''}
+        ${error?`<div class="error" role="alert">${esc(error)}</div>`:''}
+        ${overview|| (M.selected(config).length>1?goalSwitch():'')}
+        ${resultContent(mode)}
+      </section>
+    </div>`;
+  }
   function render() {
     ocrDragDepth=0;
     for(const d of root.querySelectorAll('details[data-card-title]'))openedCards.set(d.dataset.cardTitle,d.open);
     config.setChoice=config.setChoice||'none';
     if(!M.selected(config).some(m=>m.id===goal))goal=M.selected(config)[0]?.id||'';
     root.innerHTML='<header class="topbar"><div class="topbar-inner"><div class="brand"><div class="brand-icon">✧</div><div><h1>提瓦特词条实验室</h1><p>TEYVAT · ARTIFACT STAT LAB</p></div></div>'+appearancePicker()+'<div class="top-actions"><span class="badge">原神 '+D.version+' · 月 / 星反应</span><button class="soft-btn" data-action="import">导入配置</button><button class="soft-btn" data-action="export">保存配置 ↓</button></div></div></header><main class="workspace"><nav class="main-nav">'+[['optimize','最优分配'],['marginal','词条收益'],['weapons','武器对比'],['formulas','公式与数据']].map(([k,l],i)=>'<button class="nav-btn '+(tab===k?'active':'')+'" data-tab="'+k+'"><span class="nav-num">0'+(i+1)+'</span>'+l+'</button>').join('')+'</nav>'+
-      (tab==='formulas'?formulasPage():tab==='weapons'?comparisonPage():'<div class="layout"><aside class="sidebar">'+characterCard()+(tab==='marginal'?panelCard():'')+artifactsCard()+(tab==='optimize'?budgetCard():'')+metricsCard()+metricSettingsCard()+teammatesCard()+manualBuffCard()+buffsCard()+contributorsCard()+'</aside><section class="results '+(dirty?'stale':'')+'"><div class="results-top"><div><h3>'+(tab==='optimize'?'各伤害指标 · 分别求最优':'一个词条，会带来多少提升')+'</h3></div>'+goalSwitch()+'</div><div class="calculate-line" style="margin-bottom:15px"><span class="status-msg">'+(busy?'正在计算…':dirty?'配置已变化，请重新计算':'')+'</span><div style="margin-left:auto;display:flex;gap:7px"><button class="soft-btn" data-action="csv" '+(!results[tab]?.[goal]||dirty||busy?'disabled':'')+'>导出结果</button><button class="primary" data-action="calculate"'+(busy?' disabled':'')+'>'+(busy?'计算中…':tab==='marginal'?'比较所选指标收益':'分别优化所选指标')+'<span class="arrow">→</span></button></div></div>'+(busy?'<div class="progress"><div style="width:'+progress+'%"></div></div>':'')+(error?'<div class="error" role="alert">'+esc(error)+'</div>':'')+metricOverview(tab)+(activeMetric()?'<div class="metric-assumptions"><strong>'+esc(activeMetric().title)+'</strong><ul>'+M.describe(config,activeMetric()).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul></div>':'')+resultContent(tab)+'</section></div>')+
+      (tab==='formulas'?formulasPage():tab==='weapons'?comparisonPage():teamCalculationPage(tab))+
       '<footer class="footer"><span>五星圣遗物 · 花与羽毛固定 · 输入的技能条件与增益决定结果</span><span><a href="USER_GUIDE.html" target="_blank">使用说明与覆盖范围</a> · '+(window.location.protocol==='file:'?'':'<a href="teyvat-offline.zip" download>下载离线版</a> · ')+'<a href="THIRD_PARTY_NOTICES.txt" target="_blank">许可信息</a> · 本地保存</span></footer></main>'+(tab==='formulas'?'':'<div class="mobile-actions"><button class="soft-btn" data-action="view-results">查看结果 ↑</button><button class="primary" data-action="calculate"'+(busy?' disabled':'')+'>'+(busy?'计算中…':'计算所选指标 →')+'</button></div>')+'<button type="button" class="back-to-top'+(tab==='formulas'?'':' above-mobile-actions')+'" data-action="back-to-top" aria-label="返回顶部" title="返回顶部"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 14l6-6 6 6M6 4h12"/></svg><span>顶部</span></button>'+'<input class="hidden" type="file" id="config-file" accept=".json">';
     pendingOcrUi();
   }
@@ -525,7 +644,7 @@
         catch(e){results[mode][g][scope]={error:e.message};}task++;
         await new Promise(r=>setTimeout(r,0));
       } else {
-        try{results[mode][g]=E.marginal(M.configFor(snapshot,metric),snapshot.panel);if(!snapshot.teammates?.some(t=>t.character))results[mode][g].team={error:'选择队友后可同时计算组队收益。'};}catch(e){results[mode][g]={solo:{error:e.message},team:{error:e.message}};}
+        try{results[mode][g]=E.marginal(M.configFor(snapshot,metric),snapshot.panel);if(!snapshot.teammates?.some(t=>t.character))results[mode][g].team={error:'请先选择队友，再计算组队词条收益。'};}catch(e){results[mode][g]={solo:{error:e.message},team:{error:e.message}};}
         for(const scope of ['solo','team']){
           const current=results[mode][g][scope];
           if(!current.error)try{
