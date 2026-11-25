@@ -1,0 +1,28 @@
+name: Verify compact Teyvat team results release
+on:
+  push:
+    branches: [codex-compact-team-stage-20261125]
+    paths: ['.codex-release-team-results/manifest.json']
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Verify and build clean release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(git rev-parse HEAD^)
+          test "$base" = b7b5f9f424c259c2584f6374c50f4a39b9c13793
+          python .codex-release-team-results/rebuild.py
+          git rm --cached -r -- .codex-release-team-results .github/workflows/codex-compact-team-release.yml
+          git add -- .nojekyll README.md release-manifest.json *.js *.html *.css *.txt teyvat-offline.zip vendor/ocr
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          tree=$(git write-tree)
+          commit=$(git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit-tree "$tree" -p "$base" -m 'Compact the team result layout')
+          git push origin "$commit:refs/heads/codex-compact-team-20261125"
+          printf 'Verified release commit: %s\n' "$commit"
