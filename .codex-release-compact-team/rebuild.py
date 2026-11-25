@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath
 import zipfile
 
 root = Path.cwd()
-staging = root / '.codex-release-team-results'
+staging = root / '.codex-release-compact-team'
 sha = lambda data: hashlib.sha256(data).hexdigest()
 metadata = json.loads((staging / 'manifest.json').read_text(encoding='utf-8'))
 recipe_bytes = b''.join((staging / p).read_bytes() for p in metadata['recipeParts'])
