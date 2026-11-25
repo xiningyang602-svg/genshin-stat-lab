@@ -1,15 +1,15 @@
 {
-  "sourceCommit": "1ff23bd5a7a33aaca16c5b084d0d0e444e308b59",
+  "sourceCommit": "e991a91ebdf020b0c32dd0bba69e86cbfdecd5fc",
   "files": [
     {
       "path": "app.js",
-      "bytes": 119042,
-      "sha256": "46786f58d52fa3ff140db5009cfe7911fe6f1b47eb15edbf272471cd5ae5721d"
+      "bytes": 120175,
+      "sha256": "19d031883bddcd754d14693211f59f70bd399b54848fdc1635c191c895641ede"
     },
     {
       "path": "appearance.css",
-      "bytes": 9477,
-      "sha256": "4a8e1b088004eb51194df73b3a28ffdccf108de4db18bfa8ce36ad93644b1aad"
+      "bytes": 10615,
+      "sha256": "c6c4dc858e1dc3cd3bf7992fb29f91166b77f8d9a7f548f71a97869afdc3fb53"
     },
     {
       "path": "appearance.js",
@@ -39,7 +39,7 @@
     {
       "path": "index.html",
       "bytes": 1953,
-      "sha256": "a84295cd5468f0dc68fc27661b9dc41858c7f34d0235d9ef2836af44bdb0a7bf"
+      "sha256": "2a96e1139de5b531a372f429ddcb0d02c78484772887253483e6dcadd29a695b"
     },
     {
       "path": "mechanisms.js",
@@ -98,8 +98,8 @@
     },
     {
       "path": "teyvat-offline.zip",
-      "bytes": 14897755,
-      "sha256": "48087f461403d14382fc786e34dfcebdd380aabd42f342526a513c99fa2e572c"
+      "bytes": 14898347,
+      "sha256": "c1ef53b22966a2910a1418e17056bb7240ab02f4486000ecf74f745f41b23355"
     },
     {
       "path": "THIRD_PARTY_NOTICES.txt",
