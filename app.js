@@ -180,10 +180,6 @@
   function metricOverview(mode){
     const metrics=M.selected(config);
     if(!metrics.some(metric=>teamResult(mode,metric.id)))return '';
-    const selected=teamResult(mode);
-    const damage=mode==='marginal'?selected?.base:selected;
-    const mains=mode==='marginal'?selected?.inputMains:selected?.mains;
-    const settlement=damage&&!damage.error?metricSettlement(damage,mains):'';
     const rows=metrics.map(metric=>{
       const result=teamResult(mode,metric.id),damage=mode==='marginal'?result?.base:result;
       const cells=result?.error?'<td colspan="2" class="muted">条件不满足</td>':
@@ -193,16 +189,11 @@
         ${cells}
       </tr>`;
     }).join('');
-    return `<section class="card team-metric-card">
-      <div class="card-head"><h3>${mode==='optimize'?'各指标独立最优':'当前装备 · 各指标伤害'}</h3></div>
-      <div class="card-body team-metric-grid${settlement?' has-settlement':''}">
-        <table class="metric-overview">
-          <thead><tr><th scope="col">指标</th><th scope="col">期望伤害</th><th scope="col">全暴击伤害</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        ${settlement}
-      </div>
-    </section>`;
+    return card(mode==='optimize'?'各指标独立最优':'当前装备 · 各指标伤害',
+      `<table class="metric-overview">
+        <thead><tr><th scope="col">指标</th><th scope="col">期望伤害</th><th scope="col">全暴击伤害</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`);
   }
   const buffFields={...E.LABELS,aDmg:'普攻伤害加成 %',a2Dmg:'重击伤害加成 %',a3Dmg:'下落伤害加成 %',eDmg:'战技伤害加成 %',qDmg:'爆发伤害加成 %',aPlus:'普攻附加基础伤害',a2Plus:'重击附加基础伤害',a3Plus:'下落附加基础伤害',ePlus:'战技附加基础伤害',qPlus:'爆发附加基础伤害',aCpct:'普攻暴击率 %',aCdmg:'普攻暴击伤害 %',a2Cpct:'重击暴击率 %',a2Cdmg:'重击暴击伤害 %',eCpct:'战技暴击率 %',eCdmg:'战技暴击伤害 %',qCpct:'爆发暴击率 %',qCdmg:'爆发暴击伤害 %',enemyDef:'减防 %',enemyIgnore:'无视防御 %',kx:'全元素/物理减抗 %',res_pyro:'火减抗 %',res_hydro:'水减抗 %',res_cryo:'冰减抗 %',res_electro:'雷减抗 %',res_geo:'岩减抗 %',res_anemo:'风减抗 %',res_dendro:'草减抗 %',res_physical:'物理减抗 %',multi:'独立倍率加成 %',vaporize:'蒸发反应增伤 %',melt:'融化反应增伤 %',aggravate:'超激化反应增伤 %',spread:'蔓激化反应增伤 %',bloom:'绽放反应增伤 %',hyperBloom:'超绽放反应增伤 %',burgeon:'烈绽放反应增伤 %',swirl:'扩散反应增伤 %',lunarCharged:'月感电增伤 %',lunarBloom:'月绽放增伤 %',lunarCrystallize:'月结晶增伤 %',stellarConduct:'星超导增伤 %',stellarSwirl:'星扩散增伤 %',stellarVortex:'星辉冰旋增伤 %',fypct:'月/星基础伤害提升 %',fyplus:'月/星专属固定基础伤害',elevated:'月/星擢升 %',lunarChargedBase:'月感电基础伤害提升 %',lunarBloomBase:'月绽放基础伤害提升 %',lunarCrystallizeBase:'月结晶基础伤害提升 %',stellarConductBase:'星超导基础伤害提升 %',stellarSwirlBase:'星扩散基础伤害提升 %',stellarConductFlat:'星超导专属固定增伤',stellarSwirlFlat:'星扩散专属固定增伤'};
   buffFields.dmg='通用伤害加成 %（含物理）';
@@ -336,24 +327,14 @@
     const message=mode==='marginal'?'填写常驻面板或导入圣遗物截图，选择队友和伤害指标后开始计算。':'填写有效副词条预算，选择队友和伤害指标后开始计算。';
     return `<section class="card empty"><h3>等待计算</h3><p>${message}</p></section>`;
   }
-  function critPanel(r,compact=false){
+  function critPanel(r){
     const reference=r.referenceCrit||r.panel,details=r.details||[];
     const calls=details.flatMap(d=>d.calls||[]).filter(c=>c.avg>0&&['normal','amplifying','additive','direct','indirect'].includes(c.kind)&&Number.isFinite(c.cr));
     const range=(key,cap=false)=>{const values=calls.map(c=>cap?Math.min(100,Math.max(0,c[key])):Math.max(0,c[key])).filter(Number.isFinite),lo=Math.min(...values),hi=Math.max(...values);return fmt(lo,1)+(hi-lo>=.05?'–'+fmt(hi,1):'')+'%';};
     const bonuses=new Map();for(const d of details)for(const b of d.artifactCritBonuses||[]){const id=b.source+':'+b.key;if(!bonuses.has(id))bonuses.set(id,{...b,values:new Set()});bonuses.get(id).values.add(b.value);}
     const label=key=>{const m=/^(.*?)(Cpct|Cdmg)$/.exec(key);return key==='cpct'?'暴击率':key==='cdmg'?'暴击伤害':(({a:'普攻',a2:'重击',a3:'下落',e:'战技',q:'爆发',stellarConduct:'星超导',stellarSwirl:'星扩散',stellarVortex:'星辉冰旋',lunarCharged:'月感电',lunarBloom:'月绽放',lunarCrystallize:'月结晶'})[m?.[1]]||m?.[1]||'')+(m?.[2]==='Cdmg'?'暴击伤害':'暴击率');};
     const bonusText=[...bonuses.values()].map(b=>esc(b.source)+' '+[...b.values].sort((a,b)=>a-b).map(n=>'+'+fmt(n,1)+'%').join(' / ')+esc(label(b.key))).join('；');
-    const bonusNote=bonusText?'<p class="crit-note artifact-crit">套装条件加成：'+bonusText+'（已计入适用伤害）</p>':'';
-    if(compact){
-      return `<table class="team-settlement-crit" aria-label="常驻与结算双暴">
-        <thead><tr><td></td><th scope="col">暴击率</th><th scope="col">暴击伤害</th></tr></thead>
-        <tbody>
-          <tr><th scope="row">配装常驻</th><td class="num">${fmt(reference.cpct,1)}%</td><td class="num">${fmt(reference.cdmg,1)}%</td></tr>
-          <tr><th scope="row">组队生效</th>${calls.length?`<td class="num">${range('cr',true)}</td><td class="num">${range('cd')}</td>`:'<td colspan="2">此指标不使用常规双暴</td>'}</tr>
-        </tbody>
-      </table>${bonusNote}`;
-    }
-    return '<div class="crit-panel"><p class="crit-heading">配装双暴 · 常驻数值</p><div class="result-mini reference-crit"><span>暴击率 <strong class="num">'+fmt(reference.cpct,1)+'%</strong></span><span>暴击伤害 <strong class="num">'+fmt(reference.cdmg,1)+'%</strong></span></div><p class="crit-heading">伤害计算 · 当前生效状态</p><div class="result-mini calculation-crit">'+(calls.length?'<span>有效暴击率 <strong class="num">'+range('cr',true)+'</strong></span><span>暴击伤害 <strong class="num">'+range('cd')+'</strong></span>':'<span>此指标不使用常规双暴</span>')+'<span>充能 '+fmt(r.panel.recharge,1)+'%</span></div>'+bonusNote+'</div>';
+    return '<div class="crit-panel"><p class="crit-heading">配装双暴 · 常驻数值</p><div class="result-mini reference-crit"><span>暴击率 <strong class="num">'+fmt(reference.cpct,1)+'%</strong></span><span>暴击伤害 <strong class="num">'+fmt(reference.cdmg,1)+'%</strong></span></div><p class="crit-heading">伤害计算 · 当前生效状态</p><div class="result-mini calculation-crit">'+(calls.length?'<span>有效暴击率 <strong class="num">'+range('cr',true)+'</strong></span><span>暴击伤害 <strong class="num">'+range('cd')+'</strong></span>':'<span>此指标不使用常规双暴</span>')+'<span>充能 '+fmt(r.panel.recharge,1)+'%</span></div>'+(bonusText?'<p class="crit-note artifact-crit">套装条件加成：'+bonusText+'（已计入适用伤害）</p>':'')+'</div>';
   }
   function skirkResultState(r){
     const d=(r.details||[]).find(d=>d.params?.skirkEffectiveExtra!==undefined);if(!d)return '';
@@ -362,18 +343,16 @@
     if(body&&calls.length===6){const hits=calls.map(c=>c.hit),same=hits.slice(0,5).every(n=>Math.abs(n-hits[0])<.01);html+='<p class="help skirk-hits">Q灭本体逐段暴击：'+(same?'前5段各 <strong class="num">'+fmt(hits[0])+'</strong>；末段 <strong class="num">'+fmt(hits[5])+'</strong>':hits.map(n=>fmt(n)).join(' / '))+'。</p>';}
     return html;
   }
-  function metricSettlement(result,mains){
-    const state=skirkResultState(result),stateKey='metric-result-state:'+tab;
-    return `<section class="team-settlement" aria-labelledby="team-settlement-title">
-      <div class="team-settlement-heading">
-        <h4 id="team-settlement-title">所选指标结算</h4>
-        <span>充能 ${fmt(result.panel.recharge,1)}%</span>
-      </div>
-      ${critPanel(result,true)}
-      <div class="team-settlement-mains"><span>沙 ${esc(E.LABELS[mains?.sands])}</span><span>杯 ${esc(E.LABELS[mains?.goblet])}</span><span>冠 ${esc(E.LABELS[mains?.circlet])}</span></div>
-      ${state?`<details class="method-details team-skill-state" data-card-title="${stateKey}"${openedCards.get(stateKey)?' open':''}>
-        <summary>技能状态与分段</summary>${state}
-      </details>`:''}
+  function resultSummary(result,mains){
+    return `<section class="card result-card team">
+      <h3>组队伤害</h3>
+      <p class="team-metric-title">${esc(activeMetric()?.title||'所选伤害指标')}</p>
+      <dl class="team-damage-summary">
+        <div><dt>期望伤害</dt><dd class="damage-big num">${fmt(result.total)}</dd></div>
+        <div><dt>全暴击伤害</dt><dd class="team-critical-damage num">${fmt(result.critical)}</dd></div>
+      </dl>
+      ${skirkResultState(result)}${critPanel(result)}
+      <div class="result-bottom">沙 ${esc(E.LABELS[mains?.sands])} / 杯 ${esc(E.LABELS[mains?.goblet])} / 冠 ${esc(E.LABELS[mains?.circlet])}</div>
     </section>`;
   }
   function allocationCard(result) {
@@ -485,11 +464,12 @@
     if(!team)return emptyResult(mode);
     if(team.error)return `<p class="error" role="alert">${esc(team.error)}</p>`;
     if(mode==='optimize'){
-      return teamReport(team)+allocationCard(team)+gainTable(team,team.marginal,team.active,true)+traceCard(team);
+      return `<div class="result-grid">${resultSummary(team,team.mains)}</div>`+
+        teamReport(team)+allocationCard(team)+gainTable(team,team.marginal,team.active,true)+traceCard(team);
     }
     const best=team.changes.reduce((top,row)=>row.rawRate>(top?.rawRate??1e-9)?row:top,null);
     const recommendation=best?`<div class="recommendation"><strong>当前更值得强化：${esc(best.name)} · ${pct(best.rawRate)}</strong></div>`:'';
-    return substatScoreCard(team)+recommendation+
+    return `<div class="result-grid">${resultSummary(team.base,team.inputMains)}</div>`+substatScoreCard(team)+recommendation+
       teamReport(team)+gainTable(team.base,team.changes,team.substatScore?.active)+traceCard(team.base);
   }
   function supportPanelReport(t){
